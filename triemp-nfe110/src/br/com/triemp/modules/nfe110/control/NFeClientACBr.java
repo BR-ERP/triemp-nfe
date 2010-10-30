@@ -76,9 +76,9 @@ public class NFeClientACBr {
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.ENVIARNFE(\""+file+"\","+lote+","+(assina?"1":"0")+","+(danfe?"1":"0")+")");
 		printStream.println(".");
-		StringBuffer retorno = new StringBuffer(this.getRetornoOperacao(0));
+		StringBuffer retorno = new StringBuffer(this.getRetornoOperacao(timeout));
 		while((retorno.indexOf("OK:") == -1) && (retorno.indexOf("ERRO:")  == -1)){
-			retorno.append(this.getRetornoOperacao(1));
+			retorno.append(this.getRetornoOperacao(timeout));
 		}
 		String ret = null;
 		if(retorno.indexOf("OK:") != -1){
