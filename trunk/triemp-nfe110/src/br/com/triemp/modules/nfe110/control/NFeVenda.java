@@ -19,18 +19,18 @@
  */
 package br.com.triemp.modules.nfe110.control;
 
+import java.io.File;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 import org.freedom.infra.model.jdbc.DbConnection;
 import org.freedom.library.functions.Funcoes;
 import org.freedom.modules.nfe.bean.AbstractNFEKey;
 import org.freedom.modules.nfe.bean.FreedomNFEKey;
-import org.freedom.modules.nfe.bean.NFEInconsistency;
-import org.freedom.modules.nfe.bean.NFEInconsistency.TypeInconsistency;
 
-import br.com.triemp.modules.nfe.util.NFeUtil;
+import br.com.triemp.nfe.util.NFeUtil;
 import br.inf.portalfiscal.nfe.ObjectFactory;
 import br.inf.portalfiscal.nfe.TNFe;
 import br.inf.portalfiscal.nfe.TUf;
@@ -45,8 +45,53 @@ public class NFeVenda extends NFe {
 		carregaItVenda();
 		carregaInfTransporte();
 		carregaCobranca();
-		gerarXmlNFe();
-		//geraLogNFe(gerarXmlNFe());
+		this.carregaXmlNFe();
+	}
+	
+	public boolean carregaXmlNFe(){
+		String chave = "";
+		PreparedStatement ps;
+		ResultSet rs;
+		String sql = "SELECT COALESCE(CHAVENFEVENDA,'') AS CHAVENFE FROM VDVENDA WHERE CODEMP=? AND CODFILIAL=? AND CODVENDA=? AND TIPOVENDA='V'";
+		try {
+			ps = conSys.prepareStatement(sql);
+			ps.setInt(1, (Integer) key.get(FreedomNFEKey.CODEMP));
+			ps.setInt(2, (Integer) key.get(FreedomNFEKey.CODFILIAL));
+			ps.setInt(3, (Integer) key.get(FreedomNFEKey.CODVENDA));
+			rs = ps.executeQuery();
+
+			if (rs.next()) {
+				chave = rs.getString("CHAVENFE").trim();
+			}
+			conSys.commit();
+			
+			if(chave.length() > 0){
+				sql = "SELECT COALESCE(PATHNFE,'') as PATHNFE FROM VDNFE WHERE CODEMP=? AND CODFILIAL=? AND CODVENDA=? AND CHAVENFE=?";
+				ps = conNFE.prepareStatement(sql);
+				ps.setInt(1, (Integer) key.get(FreedomNFEKey.CODEMP));
+				ps.setInt(2, (Integer) key.get(FreedomNFEKey.CODFILIAL));
+				ps.setInt(3, (Integer) key.get(FreedomNFEKey.CODVENDA));
+				ps.setString(4, chaveNfe);
+				rs = ps.executeQuery();
+				if(rs.next()){
+					pathAtual = rs.getString("PATHNFE");
+					
+					xmlNFe = new File(pathFreedom + separador + pathAtual);	
+				}
+				conNFE.commit();
+			}
+		} catch (SQLException err) {
+			err.printStackTrace();
+			Funcoes.mensagemErro(null,"Erro ao verificar arquivo da NFe!\n" + err.getMessage(), true, conSys, err);
+		} finally {
+			rs = null;
+			ps = null;
+			sql = null;
+		}
+		if(!xmlNFe.exists() || xmlNFe.isDirectory()){
+			return false;
+		}
+		return true;
 	}
 
 	private boolean carregaVenda() {
@@ -175,16 +220,7 @@ public class NFeVenda extends NFe {
 			ps.setInt(3, Integer.parseInt(codCli));
 			rs = ps.executeQuery();
 			if (rs.next()) {
-				String cMun = rs.getString("CODUF") + rs.getString("CODMUNIC");
-				if( (rs.getString("ENDCLI") == null || rs.getString("ENDCLI").length() < 2) 
-						|| (rs.getString("NUMCLI") == null || rs.getString("NUMCLI").length() < 1) 
-						|| (rs.getString("BAIRCLI") == null || rs.getString("BAIRCLI").length() < 1) 
-						|| (cMun == null || cMun.length() < 7) ){
-					String msg = "Cadastro de cliente incompleto!";
-					String msgCorr = "Os seguintes dados do cliente são obrigatórios:\nRazão, CPF/CNPJ, IE, Logradouro, Número, Bairro, Cidade, Estado";
-					NFEInconsistency nfeInconsistency = new NFEInconsistency(TypeInconsistency.ERROR, msg, msgCorr);
-					listInconsistency.add(nfeInconsistency);
-				}
+				String cMun = getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true);
 				dest.setXNome(getString(rs.getString("RAZCLI"), 60, true));
 				if (rs.getString("PESSOACLI").trim().equals("J")) {
 					dest.setCNPJ(getString(rs.getString("CNPJCLI"), 14, true, "./-"));
@@ -199,7 +235,7 @@ public class NFeVenda extends NFe {
 				endDest.setXCpl(getString(rs.getString("COMPLCLI"), 60));
 				endDest.setXBairro(getString(rs.getString("BAIRCLI"), 60, true));
 				endDest.setCEP(getString(rs.getString("CEPCLI"), 8, false, "-"));
-				endDest.setCMun(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
+				endDest.setCMun(cMun);
 				endDest.setXMun(getString(rs.getString("NOMEMUNIC"), 60, true));
 				endDest.setUF(getTUf(rs.getString("SIGLAUF")));
 				endDest.setCPais(getString(rs.getString("CODBACENPAIS"), 4));
@@ -211,7 +247,6 @@ public class NFeVenda extends NFe {
 					endDest.setFone(getString(rs.getString("DDDCLI"), 2, false, "()") + getString(rs.getString("FONECLI"), 14, false, "-"));
 				}
 			}
-			
 			conSys.commit();
 			
 		} catch (SQLException err) {
@@ -273,27 +308,27 @@ public class NFeVenda extends NFe {
 				prod.setVDesc(getDouble(rs.getString("VLRDESCITVENDA"), 15, 2, false, true));
 
 				// TODO - Implementações referente a dados de Importação de
-				// produtos na NF-e
+				// produtos na NFe
 				// NFe.InfNFe.Det.Prod.DI di = new
 				// ObjectFactory().createTNFeInfNFeDetProdDI();
 
 				// TODO - Implementações referente a Detalhamento Específico de
-				// Veículos novos na NF-e
+				// Veículos novos na NFe
 				// TNFe.InfNFe.Det.Prod.VeicProd veicProd = new
 				// ObjectFactory().createTNFeInfNFeDetProdVeicProd();
 
 				// TODO - Implementações referente a Detalhamento Específico de
-				// Medicamento e de matérias-primas farmacêuticas na NF-e
+				// Medicamento e de matérias-primas farmacêuticas na NFe
 				// TNFe.InfNFe.Det.Prod.Med med = new
 				// ObjectFactory().createTNFeInfNFeDetProdMed();
 
 				// TODO - Implementações referente a Detalhamento Específico de
-				// armamentos na NF-e
+				// armamentos na NFe
 				// TNFe.InfNFe.Det.Prod.Arma arma = new
 				// ObjectFactory().createTNFeInfNFeDetProdArma();
 
 				// TODO - Implementações referente a Detalhamento Específico de
-				// Combustível na NF-e
+				// Combustível na NFe
 				// TNFe.InfNFe.Det.Prod.Comb comb = new
 				// ObjectFactory().createTNFeInfNFeDetProdComb();
 
@@ -602,7 +637,7 @@ public class NFeVenda extends NFe {
 				transporta.setIE(getString(rs.getString("INSCTRAN"), 14, false, ".-"));
 				transporta.setXEnder(getString(rs.getString("ENDTRAN"), 60));
 				transporta.setXMun(getString(rs.getString("CIDTRAN"), 60));
-				transporta.setUF(TUf.valueOf(getString(rs.getString("UFTRAN"),2)));
+				transporta.setUF(getTUf(rs.getString("UFTRAN")));
 
 				if (rs.getString("CONHECFRETEVD") != null) {
 					TNFe.InfNFe.Transp.RetTransp retTransp = new ObjectFactory().createTNFeInfNFeTranspRetTransp();
@@ -702,15 +737,20 @@ public class NFeVenda extends NFe {
 			sql = null;
 		}
 	}
-	/*
-	private void geraLogNFe(){
+
+	@Override
+	protected void setStatusNFe(String pathXML){
 		String sql;
 		PreparedStatement ps;
 		
 		sql = "UPDATE VDVENDA SET CHAVENFEVENDA = ? WHERE CODEMP=? AND CODFILIAL=? AND CODVENDA=? AND TIPOVENDA=?";
 		try {
 			ps = conSys.prepareStatement(sql);
-			ps.setString(1, infNFe.getId().replace("NFe", ""));
+			if(chaveNfe != null && chaveNfe.trim().length() > 0){
+				ps.setString(1, chaveNfe);
+			}else{
+				ps.setNull(1, Types.CHAR);
+			}
 			ps.setInt(2, (Integer) key.get(FreedomNFEKey.CODEMP));
 			ps.setInt(3, (Integer) key.get(FreedomNFEKey.CODFILIAL));
 			ps.setInt(4, (Integer) key.get(FreedomNFEKey.CODVENDA));
@@ -722,18 +762,23 @@ public class NFeVenda extends NFe {
 		}
 		
 		
-		sql = "EXECUTE PROCEDURE VDADICNFEOPERASP(?,?,?,?,?,?,?,?,?)";
+		sql = "EXECUTE PROCEDURE VDADICNFEOPERASP(?,?,?,?,?,?)";
 		try {
 			ps = conNFE.prepareStatement(sql);
 			ps.setInt(1, (Integer) key.get(FreedomNFEKey.CODEMP));
 			ps.setInt(2, (Integer) key.get(FreedomNFEKey.CODFILIAL));
 			ps.setInt(3, (Integer) key.get(FreedomNFEKey.CODVENDA));
 			ps.setString(4, "V");
-			ps.setString(5, infNFe.getId().replace("NFe", ""));
-			ps.setString(6, "");
-			ps.setString(7, infNFe.getVersao());
-			ps.setString(8, "G");
-			ps.setString(9, "ARQUIVO XML DA NOTA FISCAL ELETRÔNICA DE VENDA GERADO COM SUCESSO NO DIRETÓRIO: "+path);
+			if(chaveNfe != null && chaveNfe.trim().length() > 0){
+				ps.setString(5, chaveNfe);
+			}else{
+				ps.setNull(5, Types.CHAR);
+			}
+			if(pathXML != null && pathXML.trim().length() > 0){
+				ps.setString(6, pathXML);
+			}else{
+				ps.setNull(6, Types.CHAR);
+			}
 			ps.execute();
 			
 			conNFE.commit();
@@ -742,5 +787,4 @@ public class NFeVenda extends NFe {
 			e.printStackTrace();
 		}
 	}
-	*/
 }

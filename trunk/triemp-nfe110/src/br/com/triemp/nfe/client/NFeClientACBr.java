@@ -1,14 +1,13 @@
-package br.com.triemp.modules.nfe110.control;
+package br.com.triemp.nfe.client;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.Scanner;
 
 import javax.swing.JOptionPane;
-
-import org.freedom.library.functions.Funcoes;
 
 /**
  * 
@@ -20,19 +19,19 @@ import org.freedom.library.functions.Funcoes;
 public class NFeClientACBr {
 	private String host;
 	private int port;
-	private int timeout;
 	private Socket socket;
 	private PrintStream printStream;
 	private NFeClientThread nfeClientThread;
+	private static String STATUS = "[STATUS]";
+	private static String RETORNO = "[RETORNO]";
+	private static String CONSULTA = "[CONSULTA]";
+	private static String CANCELAMENTO = "[CANCELAMENTO]";
+	private static long TIMEOUT_READ = 10000;
+	private static long TIMEOUT = 3000;
 	
 	public NFeClientACBr(String host, int port){
-		this(host, port, 2);
-	}
-	
-	public NFeClientACBr(String host, int port, int timeout){
 		this.host = host;
 		this.port = port;
-		this.timeout = timeout;
 	}
 	
 	public boolean conectar(){
@@ -51,92 +50,126 @@ public class NFeClientACBr {
 		return false;
 	}
 	
-	public String getStatusServico(){
+	public HashMap<String, String> getStatusServico(){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.STATUSSERVICO");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return montaRetorno(STATUS);
 	}
 	
 	public String assinarNFe(String file){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.ASSINARNFE(\""+file+"\")");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return this.getRetornoOperacao(TIMEOUT);
 	}
 	
 	public String validarNFe(String file){
 		this.nfeClientThread.resetStringBuffer();
-		printStream.println("NFE.VALIDARNFe(\""+file+"\")");
+		printStream.println("NFE.VALIDARNFE(\""+file+"\")");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return this.getRetornoOperacao(TIMEOUT);
 	}
 	
-	public String enviarNFe(String file, String lote, boolean assina, boolean danfe){
+	public HashMap<String, String> consultarNFe(String file){
+		this.nfeClientThread.resetStringBuffer();
+		printStream.println("NFE.CONSULTARNFE(\""+file+"\")");
+		printStream.println(".");
+		return montaRetorno(CONSULTA);
+	}
+	
+	public HashMap<String, String> enviarNFe(String file, String lote, boolean assina, boolean danfe){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.ENVIARNFE(\""+file+"\","+lote+","+(assina?"1":"0")+","+(danfe?"1":"0")+")");
 		printStream.println(".");
-		StringBuffer retorno = new StringBuffer(this.getRetornoOperacao(timeout));
-		while((retorno.indexOf("OK:") == -1) && (retorno.indexOf("ERRO:")  == -1)){
-			retorno.append(this.getRetornoOperacao(timeout));
-		}
-		String ret = null;
-		if(retorno.indexOf("OK:") != -1){
-			do{
-				retorno.append(this.getRetornoOperacao(1));
-			}while(retorno.indexOf("[RETORNO]") == -1);
-			if(retorno.indexOf("CStat=100") != -1){
-				ret = "OK";
-			}else if(retorno.indexOf("XMotivo=Rejeição") != -1){
-				ret = retorno.substring(retorno.indexOf("XMotivo=Rejeição"), retorno.length());
-				ret = ret.substring(0, ret.indexOf("CUF="));
-				ret = ret.replace("XMotivo=", "");
-			}
-		}else if(retorno.indexOf("ERRO:") != -1){
-			ret = "Erro desconhecido ao tentar enviar arquivo da NF-e.";
-		}
-		return ret;
+		return montaRetorno(RETORNO);
 	}
-	
+
 	public String enviarEmail(String email, String file, boolean danfePdf){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.ENVIAREMAIL(\""+email+"\",\""+file+"\","+(danfePdf?"1":"0")+")");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
-	}
-	
-	public String cancelarNFe(String chave, String justificativa){
-		this.nfeClientThread.resetStringBuffer();
-		printStream.println("NFE.CANCELARNFE(\""+chave+"\",\""+justificativa+"\"");
-		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return this.getRetornoOperacao(TIMEOUT);
 	}
 	
 	public String criarNFe(String file, boolean retornaXML){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.CRIARNFE(\""+file+"\","+(retornaXML?"1":"0")+")");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return this.getRetornoOperacao(TIMEOUT);
 	}
 	
 	public String criarEnviarNFe(String file, String lote, boolean danfe){
 		this.nfeClientThread.resetStringBuffer();
 		printStream.println("NFE.CRIARENVIARNFE(\""+file+"\","+lote+","+(danfe?"1":"0")+")");
 		printStream.println(".");
-		return this.getRetornoOperacao(timeout);
+		return this.getRetornoOperacao(TIMEOUT);
 	}
 	
-	private String getRetornoOperacao(int seg){
-		String ret;
-		Funcoes.espera(seg);
-		do{
-			ret = this.nfeClientThread.getStringBuffer().toString();
-		}while (ret.equals(""));
+	public String imprimirDanfe(String file){
+		this.nfeClientThread.resetStringBuffer();
+		printStream.println("NFE.IMPRIMIRDANFE(\""+file+"\")");
+		printStream.println(".");
+		return this.getRetornoOperacao(TIMEOUT);
+	}
+	
+	public HashMap<String, String> cancelarNFe(String chave, String just){
+		this.nfeClientThread.resetStringBuffer();
+		printStream.println("NFE.CANCELARNFE(\""+chave+"\","+just+")");
+		printStream.println(".");
+		return montaRetorno(CANCELAMENTO);
+	}
+	
+	public HashMap<String, String> montaRetorno(String inicio){
+		StringBuffer retStr = new StringBuffer(this.getRetornoOperacao(TIMEOUT));
+		String[] ret = null;
+		while((retStr.indexOf("OK:") == -1) && (retStr.indexOf("ERRO:")  == -1)){
+			retStr.append(this.getRetornoOperacao(TIMEOUT));
+		}
+		HashMap<String, String> retorno = new HashMap<String, String>();
+		if(retStr.indexOf("OK:") != -1){
+			while(retStr.indexOf(inicio) == -1){
+				retStr.append(this.getRetornoOperacao(TIMEOUT));
+			}
+			ret = retStr.substring(retStr.indexOf(inicio)).replaceAll("\r", "").split("\n");
+			
+			for(int i=1; i < ret.length;i++){
+				String[] arr = ret[i].split("=");
+				if(arr.length > 1){
+					retorno.put(arr[0], arr[1]);
+				}
+			}
+			
+		}else if(retStr.indexOf("ERRO:") != -1){
+			retorno.put("ERRO", retStr.toString().replace("ERRO:", ""));
+		}
+		
+		return retorno;
+	}
+
+	private String getRetornoOperacao(long millis){
+		long tempo = 0;
+		long tempoAtual = 0;
+		String ret = "";
+		try {
+			tempo = System.currentTimeMillis();
+			Thread.sleep(millis);
+			do{
+				ret = this.nfeClientThread.getStringBuffer().toString().trim();
+				tempoAtual = System.currentTimeMillis();
+			}while (ret.equals("") && (tempoAtual - tempo ) < TIMEOUT_READ );
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		return ret.replaceAll("", "");
 	}
 	
 	public String getRetorno(){
 		return this.nfeClientThread.getStringBuffer().toString().replaceAll("", "");
+	}
+	
+	public boolean isClose(){
+		return this.nfeClientThread.isStop();
 	}
 	
 	public void close(){
@@ -153,7 +186,7 @@ public class NFeClientACBr {
 	protected class NFeClientThread implements Runnable {
 		private Scanner scanner;
 		private StringBuffer stringBuffer;
-		private boolean run;
+		private boolean run = false;
 		
 		public NFeClientThread(Socket socket){
 			try {
@@ -173,6 +206,13 @@ public class NFeClientACBr {
 		}
 		public void stop(){
 			this.run = false;
+		}
+		public boolean isStop(){
+			if(this.run == true){
+				return false;
+			}else{
+				return true;
+			}
 		}
 		public String getStringBuffer(){
 			return this.stringBuffer.toString();

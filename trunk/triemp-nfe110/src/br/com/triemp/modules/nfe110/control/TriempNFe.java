@@ -21,53 +21,42 @@ package br.com.triemp.modules.nfe110.control;
 
 import org.freedom.modules.nfe.control.AbstractNFEFactory;
 
-public class TriempNFe extends AbstractNFEFactory {
-	private NFe nfe;
-	@Override
-	protected void validSend() {
-		createNFEXmlFile();
-	}
-		
-	protected void createNFEXmlFile() {
-		//DLLoading loading = new DLLoading();
-		//loading.start();
-		if(getTpNF().equals(AbstractNFEFactory.TP_NF_IN)){		 // 0 - Entrada
-			nfe = new NFeCompra(this.getConSys(), this.getConNFE(), this.getKey());
-		}else if(getTpNF().equals(AbstractNFEFactory.TP_NF_OUT)){// 1 - Saida
-			nfe = new NFeVenda(this.getConSys(), this.getConNFE(), this.getKey());
-		}
-		
-		if(nfe != null){
-			getKey().put("CHAVENFE", nfe.infNFe.getId().replace("NFe", ""));
-		}
-		//loading.stop();
-		nfe = null;
-	}
-	
-	public void cancelarNFe(){
-		/**
-		 * @author Paulo Bueno
-		 * Comunicação com ACBrNFeMonitor, para assinar, validar, transmitir a NF-e e enviar e-mail para o destinatário.
-		 */
-		/*
-		if(Aplicativo.getParameter("srvnfe").equals("S")){
-			String retorno = null;
-			StringBuffer mensagem = new StringBuffer();
-			File xmlTemp = null;
-			NFeClientACBr nfeClient = new
-			NFeClientACBr(Aplicativo.getParameter("ipservnfe"), Integer.valueOf(Aplicativo.getParameter("portservnfe")));
-			try{
-				if(nfeClient.conectar()){
-					if(nfeClient.getStatusServico().indexOf("OK") != -1){
-						mensagem.append("Verificando status do serviço - OK\n");
+import br.com.triemp.nfe.dialog.DLConsultaNFe;
 
-						retorno = nfeClient.enviarNFe(pathnfe, ide.getNNF(), true, true);
-						
-						if(retorno.indexOf("OK") != -1){
-							mensagem.append("Enviando arquivo da NF-e - OK\n");
-		*/
+public class TriempNFe extends AbstractNFEFactory {
+	
+	private NFe nfe;
+	
+	@Override
+	public void post() {
+		
+		if(getTpNF().equals(AbstractNFEFactory.TP_NF_IN)){
+			
+			nfe = new NFeCompra(this.getConSys(), this.getConNFE(), this.getKey());
+			
+		}else if(getTpNF().equals(AbstractNFEFactory.TP_NF_OUT)){
+			
+			nfe = new NFeVenda(this.getConSys(), this.getConNFE(), this.getKey());
+			
+		}
+
+		if(!nfe.getXmlNFe().exists()){
+			
+			nfe.gerarNFe();
+			
+		}
+		
+		DLConsultaNFe dlConsultaNFe = new DLConsultaNFe(nfe, getTpNF());
+		dlConsultaNFe.setVisible(true);
 	}
 
 	@Override
 	protected void runSend() {}
+
+	@Override
+	protected void validSend() {}
+
+	public NFe getNfe() {
+		return nfe;
+	}
 }
