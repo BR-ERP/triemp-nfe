@@ -1,4 +1,4 @@
-package br.com.triemp.modules.nfe110.control;
+package br.com.triemp.nfe.client;
 
 import java.io.IOException;
 import java.io.PrintStream;

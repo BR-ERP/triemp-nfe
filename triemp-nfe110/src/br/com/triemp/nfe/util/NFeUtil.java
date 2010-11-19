@@ -1,4 +1,4 @@
-package br.com.triemp.modules.nfe.util;
+package br.com.triemp.nfe.util;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -177,5 +177,13 @@ public class NFeUtil {
 		}else{
 			return false;
 		}
+	}
+	
+	public static String criaDiretorio(String dir){
+		File d = new File(dir);
+		if(!d.exists() || !d.isDirectory()){
+			d.mkdirs();
+		}
+		return dir;
 	}
 }

@@ -28,14 +28,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.Random;
 
-import javax.swing.JOptionPane;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -43,12 +39,10 @@ import javax.xml.bind.Marshaller;
 import org.freedom.infra.functions.SystemFunctions;
 import org.freedom.infra.model.jdbc.DbConnection;
 import org.freedom.library.functions.Funcoes;
-import org.freedom.library.swing.frame.Aplicativo;
 import org.freedom.modules.nfe.bean.AbstractNFEKey;
 import org.freedom.modules.nfe.bean.FreedomNFEKey;
-import org.freedom.modules.nfe.bean.NFEInconsistency;
 
-import br.com.triemp.modules.nfe.util.NFeUtil;
+import br.com.triemp.nfe.util.NFeUtil;
 import br.inf.portalfiscal.nfe.ObjectFactory;
 import br.inf.portalfiscal.nfe.TEnderEmi;
 import br.inf.portalfiscal.nfe.TEndereco;
@@ -56,7 +50,7 @@ import br.inf.portalfiscal.nfe.TNFe;
 import br.inf.portalfiscal.nfe.TUf;
 import br.inf.portalfiscal.nfe.TUfEmi;
 
-public class NFe {
+public abstract class NFe {
 
 	protected TNFe nfe;
 	protected TNFe.InfNFe infNFe;
@@ -68,19 +62,32 @@ public class NFe {
 	protected TNFe.InfNFe.Total total;
 	protected TNFe.InfNFe.Transp transp;
 	protected TNFe.InfNFe.InfAdic infAdic;
-	protected List<NFEInconsistency> listInconsistency;
 	protected AbstractNFEKey key = null;
 	protected DbConnection conSys = null;
 	protected DbConnection conNFE = null;
 	protected String msgSimples = null;
 	protected NFe triempNFe;
 	protected String emailNfe = null;
+	protected boolean valid = true;
+	protected String chaveNfe;
+	protected String pathAtual;
+	protected String separador;
+	protected String pathFreedom;
+	protected File xmlNFe = new File("");
+	
+	protected abstract void setStatusNFe(String pathXML);
 	
 	public NFe(DbConnection conSys, DbConnection conNFE, AbstractNFEKey key) {
 		this.conSys = conSys;
 		this.conNFE = conNFE;
 		this.key = key;
-		listInconsistency = new ArrayList<NFEInconsistency>();
+		if (SystemFunctions.getOS() == SystemFunctions.OS_LINUX) {
+			this.separador = "/";
+		} else if (SystemFunctions.getOS() == SystemFunctions.OS_WINDOWS) {
+			this.separador = "\\";
+		}
+		this.pathFreedom = (String) key.get(FreedomNFEKey.DIRNFE);
+		
 		nfe = new ObjectFactory().createTNFe();
 		infNFe = new ObjectFactory().createTNFeInfNFe();
 		nfe.setInfNFe(infNFe);
@@ -99,14 +106,41 @@ public class NFe {
 		
 		carregaPreferenciasNFe();
 	}
+	
+	public void gerarNFe(){
+		try{
+			JAXBContext jaxbContext = JAXBContext.newInstance("br.inf.portalfiscal.nfe");
+			Marshaller marshaller = jaxbContext.createMarshaller();
+			//marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+			marshaller.setProperty(Marshaller.JAXB_ENCODING, new String("UTF-8"));
 
+			NFeUtil.criaDiretorio(pathFreedom + separador + "enviar");
+			pathAtual = "enviar" + separador + infNFe.getId().trim().replace("NFe", "") + "-nfe.xml";
+			xmlNFe = new File(pathFreedom + separador + pathAtual);
+			FileOutputStream fos = new FileOutputStream(xmlNFe);
+			
+			marshaller.marshal(nfe, fos);
+			fos.close();
+			
+			this.setStatusNFe(pathAtual);
+			
+		} catch (JAXBException e) {
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	protected void carregaInfoNFe() {
 		infNFe.setVersao("1.10");
 		PreparedStatement ps;
 		ResultSet rs;
 		String sql = null;
 		Integer codigo = null;
-		String chaveNFe = null;
 		try {
 			if(ide != null){
 				if(ide.getTpNF().equals("0")){		 // 0 - Entrada
@@ -123,13 +157,13 @@ public class NFe {
 				rs = ps.executeQuery();
 				
 				if (rs.next()) {
-					chaveNFe = rs.getString("CHAVENFE");
+					chaveNfe = rs.getString("CHAVENFE");
 				}
 			}
-			if(chaveNFe != null){
-				infNFe.setId("NFe" + chaveNFe);
-				ide.setCNF(getString(chaveNFe.substring(35, 43), 8, true));
-				ide.setCDV(getInteger(chaveNFe.substring(chaveNFe.length()-1), 1, true));
+			if(chaveNfe != null && chaveNfe.trim().length() > 0){
+				infNFe.setId("NFe" + chaveNfe);
+				ide.setCNF(getString(chaveNfe.substring(35, 43), 8, true));
+				ide.setCDV(getInteger(chaveNfe.substring(chaveNfe.length()-1), 1, true));
 			}else{
 				Random random = new Random();
 				SimpleDateFormat format = new SimpleDateFormat("yyMM");
@@ -145,6 +179,7 @@ public class NFe {
 				infNFe.setId("NFe" + id + cdv);
 				ide.setCNF(getString(cnf, 9, true));
 				ide.setCDV(getInteger(cdv, 1, true));
+				chaveNfe = id + cdv;
 			}
 		} catch (SQLException err) {
 			err.printStackTrace();
@@ -244,133 +279,6 @@ public class NFe {
 				infNFe.setInfAdic(infAdic);
 			}
 			infAdic.setInfAdFisco((infAdic.getInfAdFisco() != null)? infAdic.getInfAdFisco() + " | " + mens : mens);
-		}
-	}
-	
-	protected String gerarXmlNFe(){
-		String fileEnviado = "";
-		try {
-			JAXBContext jaxbContext = JAXBContext.newInstance("br.inf.portalfiscal.nfe");
-			Marshaller marshaller = jaxbContext.createMarshaller();
-			//marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-			marshaller.setProperty(Marshaller.JAXB_ENCODING, new String("UTF-8"));
-			String separador = "";
-			if (SystemFunctions.getOS() == SystemFunctions.OS_LINUX) {
-				separador = "/";
-			} else if (SystemFunctions.getOS() == SystemFunctions.OS_WINDOWS) {
-				separador = "\\";
-			}
-			
-			String dirNFe = (String) key.get(FreedomNFEKey.DIRNFE) + separador;
-			String[] dir = {dirNFe + "enviar", dirNFe + "temp", dirNFe + "enviado"};
-			for(int i=0; i < dir.length; i++){
-				File d = new File(dir[i]);
-				if(!d.exists() || !d.isDirectory()){
-					d.mkdir();
-				}
-			}
-			String nomeXML = infNFe.getId().trim().replace("NFe", "") + "-nfe.xml";
-			File xmlNFe = new File(dir[0] + separador + nomeXML);
-			FileOutputStream fos = new FileOutputStream(xmlNFe);
-			marshaller.marshal(nfe, fos);
-			fos.close();
-
-			/**
-			 * @author Paulo Bueno
-			 * Comunicação com ACBrNFeMonitor, para assinar, validar, transmitir a NF-e e enviar e-mail para o destinatário.
-			 */
-			if(Aplicativo.getParameter("srvnfe").equals("S")){
-				String retorno = null;
-				StringBuffer mensagem = new StringBuffer();
-				File xmlTemp = null;
-				NFeClientACBr nfeClient = new
-				NFeClientACBr(Aplicativo.getParameter("ipservnfe"), Integer.valueOf(Aplicativo.getParameter("portservnfe")));
-				try{
-					if(nfeClient.conectar()){
-						String fileTemp = dir[1] + separador + nomeXML;
-						xmlTemp = new File(fileTemp);
-						if(NFeUtil.copy(xmlNFe, xmlTemp)){
-							if(nfeClient.getStatusServico().indexOf("OK") != -1){
-								mensagem.append("Verificando status do serviço - OK\n");
-								
-								String pathnfe = Aplicativo.getParameter("pathnfe") + nomeXML;
-								
-								retorno = nfeClient.enviarNFe(pathnfe, ide.getNNF(), true, true);
-								
-								if(retorno.indexOf("OK") != -1){
-									mensagem.append("Enviando arquivo da NF-e - OK\n");
-									
-									GregorianCalendar data = new GregorianCalendar();
-									String pathEnviado = dir[2] + separador + String.valueOf(data.get(Calendar.YEAR)) + separador 
-														+ String.valueOf(data.get(Calendar.MONTH)+1);
-									File dirEnviado = new File(pathEnviado);
-									if(!dirEnviado.exists()){
-										dirEnviado.mkdirs();
-									}
-									
-									fileEnviado = pathEnviado + separador + nomeXML;
-									File xmlEnviado = new File(fileEnviado);
-									if(NFeUtil.copy(xmlTemp, xmlEnviado)){
-										xmlNFe.delete();
-									}
-									
-									setChaveNFe();
-									
-									if(emailNfe != null){
-										if(nfeClient.enviarEmail(emailNfe, pathnfe, true).indexOf("OK") != -1){
-											mensagem.append("Enviando e-mail da NF-e para o destinatário da Nota Fiscal - OK\n");
-										}else{
-											mensagem.append("Enviando e-mail da NF-e para o destinatário da Nota Fiscal - FALHOU\n" + nfeClient.getRetorno() + "\n\n");
-										}
-									}else{
-										mensagem.append("Enviando e-mail da NF-e para o destinatário da Nota Fiscal - FALHOU\n e-mail do destinatário não encontrado!\n\n");
-									}
-								}else{
-									mensagem.append("Enviando arquivo da NF-e - FALHOU\n" + retorno + "\n\n");
-								}
-							}else{
-								mensagem.append("Verificando status do serviço - FALHOU\n");
-							}
-						}
-					}
-				}finally{
-					nfeClient.close();
-					if(xmlTemp != null){
-						xmlTemp.delete();
-					}
-					if(mensagem.length() > 0){
-						JOptionPane.showMessageDialog(null, mensagem, "Envio da NF-e", JOptionPane.INFORMATION_MESSAGE);
-					}
-				}
-			}
-		} catch (JAXBException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}finally{
-			
-		}
-		return fileEnviado;
-	}
-	
-	protected void setChaveNFe(){
-		String sql;
-		PreparedStatement ps;
-		
-		sql = "UPDATE VDVENDA SET CHAVENFEVENDA = ? WHERE CODEMP=? AND CODFILIAL=? AND CODVENDA=? AND TIPOVENDA=?";
-		try {
-			ps = conSys.prepareStatement(sql);
-			ps.setString(1, infNFe.getId().replace("NFe", ""));
-			ps.setInt(2, (Integer) key.get(FreedomNFEKey.CODEMP));
-			ps.setInt(3, (Integer) key.get(FreedomNFEKey.CODFILIAL));
-			ps.setInt(4, (Integer) key.get(FreedomNFEKey.CODVENDA));
-			ps.setString(5, "V");
-			ps.execute();
-			conSys.commit();
-		} catch (SQLException e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -500,4 +408,48 @@ public class NFe {
 		}
 		return string;  
 	}
+	public TNFe getNfe() {
+		return nfe;
+	}
+	public String getChaveNfe() {
+		return chaveNfe;
+	}
+	public void setChaveNfe(String chaveNfe) {
+		this.chaveNfe = chaveNfe;
+	}
+	public String getPathAtual() {
+		return pathAtual;
+	}
+	public void setPathAtual(String pathAtual) {
+		this.pathAtual = pathAtual;
+		this.setStatusNFe(pathAtual);
+	}
+	public String getSeparador() {
+		return separador;
+	}
+	public void setSeparador(String separador) {
+		this.separador = separador;
+	}
+	public AbstractNFEKey getKey() {
+		return key;
+	}
+	public File getXmlNFe() {
+		return xmlNFe;
+	}
+	public void setXmlNFe(File file){
+		this.xmlNFe = file;
+	}
+	public String getPathFreedom() {
+		return pathFreedom;
+	}
+	public DbConnection getConSys() {
+		return conSys;
+	}
+	public DbConnection getConNFE() {
+		return conNFE;
+	}
+	public String getEmailNfe() {
+		return emailNfe;
+	}
+	
 }
