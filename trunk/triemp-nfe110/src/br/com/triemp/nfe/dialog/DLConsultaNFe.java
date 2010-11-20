@@ -29,10 +29,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
@@ -41,6 +44,9 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.transform.stream.StreamSource;
 
 import org.freedom.bmps.Icone;
@@ -60,8 +66,6 @@ import br.inf.portalfiscal.nfe.ObjectFactory;
 import br.inf.portalfiscal.nfe.TNFe;
 import br.inf.portalfiscal.nfe.TNfeProc;
 import br.inf.portalfiscal.nfe.TProtNFe;
-
-import com.sun.org.apache.xerces.internal.jaxp.datatype.XMLGregorianCalendarImpl;
 
 public class DLConsultaNFe extends FFDialogo {
 
@@ -250,12 +254,12 @@ public class DLConsultaNFe extends FFDialogo {
 						nfeProc.setNFe(nfeFile);
 						
 						TProtNFe protNFe = new ObjectFactory().createTProtNFe();
-						protNFe.setVersao(nfe.getNfe().getInfNFe().getVersao());
+						//protNFe.setVersao(nfe.getNfe().getInfNFe().getVersao());
 						
 						TProtNFe.InfProt infProt = new ObjectFactory().createTProtNFeInfProt();
-						infProt.setId(retorno.get("NProt"));
+						//infProt.setId(retorno.get("NProt"));
 						infProt.setNProt(retorno.get("NProt"));
-						infProt.setDhRecbto(new XMLGregorianCalendarImpl(strToGregorianCalendar(retorno.get("DhRecbto"))));
+						infProt.setDhRecbto(strToGregorianCalendar(retorno.get("DhRecbto")));
 						infProt.setDigVal(retorno.get("DigVal").getBytes());
 						infProt.setVerAplic(retorno.get("VerAplic"));
 						infProt.setTpAmb(retorno.get("TpAmb"));
@@ -356,7 +360,7 @@ public class DLConsultaNFe extends FFDialogo {
 				nfe.setXmlNFe(xmlTemp);
 				
 				fileAcbr = Aplicativo.getParameter("pathnfe") + separador + pathAtual;	
-				retorno = nfeClient.enviarNFe(fileAcbr, nfe.getNfe().getInfNFe().getIde().getNNF(), true, false);
+				retorno = nfeClient.enviarNFe(fileAcbr, nfe.getNfe().getInfNFe().getIde().getNNF(), true, true);
 					
 				if("100".equals(retorno.get("CStat")) || "103".equals(retorno.get("CStat"))
 						|| "104".equals(retorno.get("CStat")) || "105".equals(retorno.get("CStat"))){
@@ -472,28 +476,24 @@ public class DLConsultaNFe extends FFDialogo {
 		super.setVisible(b);
 	}
 	
-	private GregorianCalendar strToGregorianCalendar(String dataString){
-		GregorianCalendar gc = null;
-		
-		if(dataString.indexOf(" ") != -1){
-			String[] dtHr = dataString.split(" ");
-			String[] dt = dtHr[0].split("/");
-			String[] hr = dtHr[1].split(":");
+	private XMLGregorianCalendar strToGregorianCalendar(String strData){
+		XMLGregorianCalendar xmlGc = null;
+		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+		try {
 			
-			if(dt.length == 3 && hr.length == 3){
-				int dia = Integer.parseInt(dt[0]);
-				int mes = Integer.parseInt(dt[1]);
-				int ano = Integer.parseInt(dt[2]);
-				
-				int hor = Integer.parseInt(hr[0]);
-				int min = Integer.parseInt(hr[1]);
-				int seg = Integer.parseInt(hr[2]);
-				
-				gc = new GregorianCalendar(ano, mes, dia, hor, min, seg);
-			}
+			GregorianCalendar gc = new GregorianCalendar(new Locale("pt","BR"));
+			gc.setTime(sdf.parse(strData));
+			
+			xmlGc = DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
+			xmlGc.setFractionalSecond(null);
+			xmlGc.setTimezone(0);
+		} catch (DatatypeConfigurationException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
 		}
 		
-		return gc;
+		return xmlGc;
 	}
 	
 	public void keyPressed(KeyEvent kevt) {
