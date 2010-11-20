@@ -26,8 +26,8 @@ public class NFeClientACBr {
 	private static String RETORNO = "[RETORNO]";
 	private static String CONSULTA = "[CONSULTA]";
 	private static String CANCELAMENTO = "[CANCELAMENTO]";
-	private static long TIMEOUT_READ = 10000;
-	private static long TIMEOUT = 3000;
+	private static long TIMEOUT_READ = 20000;
+	private static long TIMEOUT = 4000;
 	
 	public NFeClientACBr(String host, int port){
 		this.host = host;
@@ -123,13 +123,16 @@ public class NFeClientACBr {
 	public HashMap<String, String> montaRetorno(String inicio){
 		StringBuffer retStr = new StringBuffer(this.getRetornoOperacao(TIMEOUT));
 		String[] ret = null;
-		while((retStr.indexOf("OK:") == -1) && (retStr.indexOf("ERRO:")  == -1)){
+		while((retStr.indexOf("OK:") == -1) && (retStr.indexOf("ERRO:") == -1)){
 			retStr.append(this.getRetornoOperacao(TIMEOUT));
 		}
 		HashMap<String, String> retorno = new HashMap<String, String>();
 		if(retStr.indexOf("OK:") != -1){
-			while(retStr.indexOf(inicio) == -1){
+			long tempo = System.currentTimeMillis();
+			long tempoAtual = 0;
+			while(retStr.indexOf(inicio) == -1 && (tempoAtual - tempo ) < TIMEOUT_READ){
 				retStr.append(this.getRetornoOperacao(TIMEOUT));
+				tempoAtual = System.currentTimeMillis();
 			}
 			ret = retStr.substring(retStr.indexOf(inicio)).replaceAll("\r", "").split("\n");
 			
@@ -158,6 +161,9 @@ public class NFeClientACBr {
 				ret = this.nfeClientThread.getStringBuffer().toString().trim();
 				tempoAtual = System.currentTimeMillis();
 			}while (ret.equals("") && (tempoAtual - tempo ) < TIMEOUT_READ );
+			if(ret.length() == 0){
+				ret = "ERRO:Tempo máximo de espera excedido";
+			}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

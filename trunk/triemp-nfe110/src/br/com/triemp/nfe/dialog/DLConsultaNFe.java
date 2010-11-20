@@ -26,6 +26,9 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -34,6 +37,11 @@ import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
 
 import org.freedom.bmps.Icone;
 import org.freedom.infra.pojos.Constant;
@@ -48,6 +56,12 @@ import org.freedom.modules.nfe.control.AbstractNFEFactory;
 import br.com.triemp.modules.nfe110.control.NFe;
 import br.com.triemp.nfe.client.NFeClientACBr;
 import br.com.triemp.nfe.util.NFeUtil;
+import br.inf.portalfiscal.nfe.ObjectFactory;
+import br.inf.portalfiscal.nfe.TNFe;
+import br.inf.portalfiscal.nfe.TNfeProc;
+import br.inf.portalfiscal.nfe.TProtNFe;
+
+import com.sun.org.apache.xerces.internal.jaxp.datatype.XMLGregorianCalendarImpl;
 
 public class DLConsultaNFe extends FFDialogo {
 
@@ -177,6 +191,7 @@ public class DLConsultaNFe extends FFDialogo {
 		
 		// 100 - Autorizado o uso da NFe
 		if("100".equals(CStat)){
+			setProtNFe(retorno);
 			btValidar.setEnabled(false);
 			btEnviar.setEnabled(false);
 			btStatus.setEnabled(true);
@@ -215,6 +230,61 @@ public class DLConsultaNFe extends FFDialogo {
 		chaveNFe = retorno.get("ChNFe");
 	}
 	
+	private void setProtNFe(HashMap<String, String> retorno){
+		
+		if("100".equals(retorno.get("CStat"))){
+
+			try {
+				JAXBContext jaxbContext = JAXBContext.newInstance("br.inf.portalfiscal.nfe");
+			
+				Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+				File xml = new File(nfe.getPathFreedom() + separador + pathAtual);
+				
+				TNfeProc nfeProc = unmarshaller.unmarshal(new StreamSource(xml), TNfeProc.class).getValue();
+				
+				if(nfeProc.getProtNFe() == null){
+				
+					TNFe nfeFile = unmarshaller.unmarshal(new StreamSource(xml), TNFe.class).getValue();
+					if(nfeFile.getInfNFe() != null && nfeFile.getSignature() != null){
+						nfeProc = new ObjectFactory().createTNfeProc();
+						nfeProc.setNFe(nfeFile);
+						
+						TProtNFe protNFe = new ObjectFactory().createTProtNFe();
+						protNFe.setVersao(nfe.getNfe().getInfNFe().getVersao());
+						
+						TProtNFe.InfProt infProt = new ObjectFactory().createTProtNFeInfProt();
+						infProt.setId(retorno.get("NProt"));
+						infProt.setNProt(retorno.get("NProt"));
+						infProt.setDhRecbto(new XMLGregorianCalendarImpl(strToGregorianCalendar(retorno.get("DhRecbto"))));
+						infProt.setDigVal(retorno.get("DigVal").getBytes());
+						infProt.setVerAplic(retorno.get("VerAplic"));
+						infProt.setTpAmb(retorno.get("TpAmb"));
+						infProt.setChNFe(retorno.get("ChNFe"));
+						infProt.setXMotivo(retorno.get("XMotivo"));
+						infProt.setCStat(retorno.get("CStat"));
+						
+						protNFe.setInfProt(infProt);
+						nfeProc.setProtNFe(protNFe);
+						
+						Marshaller marshaller = jaxbContext.createMarshaller();
+						marshaller.setProperty(Marshaller.JAXB_ENCODING, new String("UTF-8"));
+						
+						FileOutputStream fos = new FileOutputStream(xml);
+						
+						marshaller.marshal(nfeProc, fos);
+						fos.close();
+					}
+				}
+			} catch (JAXBException e) {
+				e.printStackTrace();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	private void validarNFe(){
 		if(!nfeClient.isClose()){
 			fileAcbr = Aplicativo.getParameter("pathnfe") + separador + pathAtual;
@@ -232,10 +302,7 @@ public class DLConsultaNFe extends FFDialogo {
 	private void imprimirNFe(){
 		if(!nfeClient.isClose()){
 			fileAcbr = Aplicativo.getParameter("pathnfe") + separador + pathAtual;
-			String ret = nfeClient.imprimirDanfe(fileAcbr);
-			if(ret.indexOf("OK") == -1){
-				JOptionPane.showMessageDialog(this, ret, "Enviar e-mail", JOptionPane.ERROR_MESSAGE);
-			}
+			nfeClient.imprimirDanfe(fileAcbr);
 		}
 	}
 	
@@ -312,6 +379,8 @@ public class DLConsultaNFe extends FFDialogo {
 						nfe.getXmlNFe().delete();
 						nfe.setXmlNFe(xmlEnviado);
 					}
+					
+					setProtNFe(retorno);
 				
 				}else{
 					NFeUtil.criaDiretorio(nfe.getPathFreedom() + separador + "regeitado");
@@ -401,6 +470,30 @@ public class DLConsultaNFe extends FFDialogo {
 			nfeClient.close();
 		}
 		super.setVisible(b);
+	}
+	
+	private GregorianCalendar strToGregorianCalendar(String dataString){
+		GregorianCalendar gc = null;
+		
+		if(dataString.indexOf(" ") != -1){
+			String[] dtHr = dataString.split(" ");
+			String[] dt = dtHr[0].split("/");
+			String[] hr = dtHr[1].split(":");
+			
+			if(dt.length == 3 && hr.length == 3){
+				int dia = Integer.parseInt(dt[0]);
+				int mes = Integer.parseInt(dt[1]);
+				int ano = Integer.parseInt(dt[2]);
+				
+				int hor = Integer.parseInt(hr[0]);
+				int min = Integer.parseInt(hr[1]);
+				int seg = Integer.parseInt(hr[2]);
+				
+				gc = new GregorianCalendar(ano, mes, dia, hor, min, seg);
+			}
+		}
+		
+		return gc;
 	}
 	
 	public void keyPressed(KeyEvent kevt) {
