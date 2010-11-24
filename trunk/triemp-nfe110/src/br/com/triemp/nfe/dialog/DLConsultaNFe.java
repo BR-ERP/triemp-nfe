@@ -26,9 +26,6 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -40,14 +37,9 @@ import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
-import javax.xml.transform.stream.StreamSource;
 
 import org.freedom.bmps.Icone;
 import org.freedom.infra.pojos.Constant;
@@ -62,10 +54,6 @@ import org.freedom.modules.nfe.control.AbstractNFEFactory;
 import br.com.triemp.modules.nfe110.control.NFe;
 import br.com.triemp.nfe.client.NFeClientACBr;
 import br.com.triemp.nfe.util.NFeUtil;
-import br.inf.portalfiscal.nfe.ObjectFactory;
-import br.inf.portalfiscal.nfe.TNFe;
-import br.inf.portalfiscal.nfe.TNfeProc;
-import br.inf.portalfiscal.nfe.TProtNFe;
 
 public class DLConsultaNFe extends FFDialogo {
 
@@ -195,7 +183,7 @@ public class DLConsultaNFe extends FFDialogo {
 		
 		// 100 - Autorizado o uso da NFe
 		if("100".equals(CStat)){
-			setProtNFe(retorno);
+			moveEnviado(retorno);
 			btValidar.setEnabled(false);
 			btEnviar.setEnabled(false);
 			btStatus.setEnabled(true);
@@ -232,61 +220,6 @@ public class DLConsultaNFe extends FFDialogo {
 			btCancelar.setEnabled(false);
 		}
 		chaveNFe = retorno.get("ChNFe");
-	}
-	
-	private void setProtNFe(HashMap<String, String> retorno){
-		
-		if("100".equals(retorno.get("CStat"))){
-
-			try {
-				JAXBContext jaxbContext = JAXBContext.newInstance("br.inf.portalfiscal.nfe");
-			
-				Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-				File xml = new File(nfe.getPathFreedom() + separador + pathAtual);
-				
-				TNfeProc nfeProc = unmarshaller.unmarshal(new StreamSource(xml), TNfeProc.class).getValue();
-				
-				if(nfeProc.getProtNFe() == null){
-				
-					TNFe nfeFile = unmarshaller.unmarshal(new StreamSource(xml), TNFe.class).getValue();
-					if(nfeFile.getInfNFe() != null && nfeFile.getSignature() != null){
-						nfeProc = new ObjectFactory().createTNfeProc();
-						nfeProc.setNFe(nfeFile);
-						
-						TProtNFe protNFe = new ObjectFactory().createTProtNFe();
-						//protNFe.setVersao(nfe.getNfe().getInfNFe().getVersao());
-						
-						TProtNFe.InfProt infProt = new ObjectFactory().createTProtNFeInfProt();
-						//infProt.setId(retorno.get("NProt"));
-						infProt.setNProt(retorno.get("NProt"));
-						infProt.setDhRecbto(strToGregorianCalendar(retorno.get("DhRecbto")));
-						infProt.setDigVal(retorno.get("DigVal").getBytes());
-						infProt.setVerAplic(retorno.get("VerAplic"));
-						infProt.setTpAmb(retorno.get("TpAmb"));
-						infProt.setChNFe(retorno.get("ChNFe"));
-						infProt.setXMotivo(retorno.get("XMotivo"));
-						infProt.setCStat(retorno.get("CStat"));
-						
-						protNFe.setInfProt(infProt);
-						nfeProc.setProtNFe(protNFe);
-						
-						Marshaller marshaller = jaxbContext.createMarshaller();
-						marshaller.setProperty(Marshaller.JAXB_ENCODING, new String("UTF-8"));
-						
-						FileOutputStream fos = new FileOutputStream(xml);
-						
-						marshaller.marshal(nfeProc, fos);
-						fos.close();
-					}
-				}
-			} catch (JAXBException e) {
-				e.printStackTrace();
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 	
 	private void validarNFe(){
@@ -330,23 +263,6 @@ public class DLConsultaNFe extends FFDialogo {
 		}
 	}
 	
-	public String replacePathAtual(String newPath){
-
-		if(pathAtual.indexOf("enviar") != -1){
-			pathAtual = pathAtual.replace("enviar", newPath);
-		}else if(pathAtual.indexOf("temp") != -1){
-			pathAtual = pathAtual.replace("temp", newPath);
-		}else if(pathAtual.indexOf("regeitado") != -1){
-			pathAtual = pathAtual.replace("regeitado", newPath);
-		}else if(pathAtual.indexOf("deletado") != -1){
-			pathAtual = pathAtual.replace("deletado", newPath);
-		}else if(pathAtual.indexOf("enviado") != -1){
-			String path[] = pathAtual.split(separador);
-			pathAtual = path[path.length -1] + separador + newPath;
-		}
-		return pathAtual;
-	}
-	
 	private void enviarNFe(){
 		if(!nfeClient.isClose()){
 			
@@ -355,55 +271,18 @@ public class DLConsultaNFe extends FFDialogo {
 			File xmlTemp = new File(nfe.getPathFreedom() + separador + pathAtual);
 			
 			if(NFeUtil.copy(nfe.getXmlNFe(), xmlTemp)){
-			
+				nfe.setPathAtual(pathAtual);
 				nfe.getXmlNFe().delete();
 				nfe.setXmlNFe(xmlTemp);
 				
 				fileAcbr = Aplicativo.getParameter("pathnfe") + separador + pathAtual;	
-				retorno = nfeClient.enviarNFe(fileAcbr, nfe.getNfe().getInfNFe().getIde().getNNF(), true, true);
-					
-				if("100".equals(retorno.get("CStat")) || "103".equals(retorno.get("CStat"))
-						|| "104".equals(retorno.get("CStat")) || "105".equals(retorno.get("CStat"))){
-					
-					GregorianCalendar data = new GregorianCalendar();
-					String pathData = String.valueOf(data.get(Calendar.YEAR)) + separador + String.valueOf(data.get(Calendar.MONTH)+1);
-					
-					String pathEnviado = "";
-					if(tipoNF.equals(AbstractNFEFactory.TP_NF_IN)){
-						pathEnviado = "enviado" + separador + "entrada" + separador + pathData;
-					}else if(tipoNF.equals(AbstractNFEFactory.TP_NF_OUT)){
-						pathEnviado = "enviado" + separador + "saida" + separador + pathData;
-					}
-					
-					NFeUtil.criaDiretorio(nfe.getPathFreedom() + separador + pathEnviado);
-					replacePathAtual(pathEnviado);
-					File xmlEnviado = new File(nfe.getPathFreedom() + separador + pathAtual);
-					
-					if(NFeUtil.copy(nfe.getXmlNFe(), xmlEnviado)){
-						nfe.getXmlNFe().delete();
-						nfe.setXmlNFe(xmlEnviado);
-					}
-					
-					setProtNFe(retorno);
-				
-				}else{
-					NFeUtil.criaDiretorio(nfe.getPathFreedom() + separador + "regeitado");
-					replacePathAtual("regeitado");
-					File xmlRegeitado = new File(nfe.getPathFreedom() + separador + pathAtual);
-					
-					if(NFeUtil.copy(xmlTemp, xmlRegeitado)){
-						nfe.getXmlNFe().delete();
-						nfe.setXmlNFe(xmlRegeitado);
-					}
-					
-				}
-				nfe.setPathAtual(pathAtual);
+				retorno = nfeClient.enviarNFe(fileAcbr, nfe.getNfe().getInfNFe().getIde().getNNF(), true, false);
 				
 				carregaStatusNFe(retorno);
 			}
 		}
 	}
-	
+
 	private void cancelarNFe(){
 		if(!nfeClient.isClose()){
 			if(chaveNFe != null && chaveNFe.length() > 0){
@@ -417,8 +296,10 @@ public class DLConsultaNFe extends FFDialogo {
 							nfe.getXmlNFe().renameTo(xmlCancelado);
 							nfe.setXmlNFe(xmlCancelado);
 							nfe.setPathAtual(pathAtual);
+							btStatus.doClick();
+						}else{
+							carregaStatusNFe(retorno);
 						}
-						carregaStatusNFe(retorno);
 					}else{
 						JOptionPane.showMessageDialog(this, "Justificativa não informado ou menor que 15 digitos", "Cancelamento de NFe", JOptionPane.ERROR_MESSAGE);
 					}
@@ -462,40 +343,6 @@ public class DLConsultaNFe extends FFDialogo {
 		}
 	}
 	
-	private void limpaTabela(){
-		int numLin = tabStatus.getNumLinhas();
-		for(int i=0; i < numLin; i++) {
-			tabStatus.tiraLinha(0);
-		}
-	}
-	
-	public void setVisible(boolean b) {
-		if(b == false && !nfeClient.isClose()){
-			nfeClient.close();
-		}
-		super.setVisible(b);
-	}
-	
-	private XMLGregorianCalendar strToGregorianCalendar(String strData){
-		XMLGregorianCalendar xmlGc = null;
-		SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-		try {
-			
-			GregorianCalendar gc = new GregorianCalendar(new Locale("pt","BR"));
-			gc.setTime(sdf.parse(strData));
-			
-			xmlGc = DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
-			xmlGc.setFractionalSecond(null);
-			xmlGc.setTimezone(0);
-		} catch (DatatypeConfigurationException e) {
-			e.printStackTrace();
-		} catch (ParseException e) {
-			e.printStackTrace();
-		}
-		
-		return xmlGc;
-	}
-	
 	public void keyPressed(KeyEvent kevt) {
 		if ( kevt.getKeyCode() == KeyEvent.VK_F2 ) {
 			btValidar.doClick();
@@ -516,5 +363,62 @@ public class DLConsultaNFe extends FFDialogo {
 		}
 		
 		super.keyPressed(kevt);
+	}
+	
+	public String replacePathAtual(String newPath){
+
+		if(pathAtual.indexOf("enviar") != -1){
+			pathAtual = pathAtual.replace("enviar", newPath);
+		}else if(pathAtual.indexOf("temp") != -1){
+			pathAtual = pathAtual.replace("temp", newPath);
+		}else if(pathAtual.indexOf("regeitado") != -1){
+			pathAtual = pathAtual.replace("regeitado", newPath);
+		}else if(pathAtual.indexOf("deletado") != -1){
+			pathAtual = pathAtual.replace("deletado", newPath);
+		}else if(pathAtual.indexOf("enviado") != -1){
+			String path[] = pathAtual.split(separador);
+			pathAtual = newPath + separador + path[path.length -1];
+		}
+		return pathAtual;
+	}
+	
+	private void moveEnviado(HashMap<String, String> retorno) {
+		if("100".equals(retorno.get("CStat")) && pathAtual.indexOf("enviado") == -1){
+			
+			GregorianCalendar data = new GregorianCalendar();
+			String pathData = String.valueOf(data.get(Calendar.YEAR)) + separador + String.valueOf(data.get(Calendar.MONTH)+1);
+			
+			String pathEnviado = "";
+			if(tipoNF.equals(AbstractNFEFactory.TP_NF_IN)){
+				pathEnviado = "enviado" + separador + pathData + separador + "entrada";
+			}else if(tipoNF.equals(AbstractNFEFactory.TP_NF_OUT)){
+				pathEnviado = "enviado" + separador + pathData + separador + "saida";
+			}
+			
+			NFeUtil.criaDiretorio(nfe.getPathFreedom() + separador + pathEnviado);
+			replacePathAtual(pathEnviado);
+			File xmlEnviado = new File(nfe.getPathFreedom() + separador + pathAtual);
+			
+			if(NFeUtil.copy(nfe.getXmlNFe(), xmlEnviado)){
+				nfe.getXmlNFe().delete();
+				nfe.setXmlNFe(xmlEnviado);
+			}
+			
+			nfe.setPathAtual(pathAtual);
+		}
+	}
+	
+	private void limpaTabela(){
+		int numLin = tabStatus.getNumLinhas();
+		for(int i=0; i < numLin; i++) {
+			tabStatus.tiraLinha(0);
+		}
+	}
+	
+	public void setVisible(boolean b) {
+		if(b == false && !nfeClient.isClose()){
+			nfeClient.close();
+		}
+		super.setVisible(b);
 	}
 }
