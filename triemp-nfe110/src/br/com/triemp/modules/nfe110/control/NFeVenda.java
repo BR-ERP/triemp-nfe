@@ -335,7 +335,8 @@ public class NFeVenda extends NFe {
 				TNFe.InfNFe.Det.Imposto impostos = new ObjectFactory().createTNFeInfNFeDetImposto();
 				
 				if (rs.getString("TIPOPROD").trim().equals("S")) {
-					prod.setNCM(getString("99", 2, true));
+					//Informar somente para a NFe 2.00
+					//prod.setNCM(getString("99", 2, true));
 					
 					TNFe.InfNFe.Det.Imposto.ISSQN issqn = new ObjectFactory().createTNFeInfNFeDetImpostoISSQN();
 					issqn.setVBC(getDouble(rs.getString("VLRBASEICMSITVENDA"), 15, 2, true));
