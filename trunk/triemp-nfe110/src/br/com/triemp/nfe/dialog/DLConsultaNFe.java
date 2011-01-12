@@ -26,20 +26,18 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Locale;
 import java.util.Map.Entry;
 
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.freedom.bmps.Icone;
 import org.freedom.infra.pojos.Constant;
@@ -385,7 +383,17 @@ public class DLConsultaNFe extends FFDialogo {
 	private void moveEnviado(HashMap<String, String> retorno) {
 		if("100".equals(retorno.get("CStat")) && pathAtual.indexOf("enviado") == -1){
 			
+			Date date = null;
 			GregorianCalendar data = new GregorianCalendar();
+			
+			try {
+				DateFormat formatter = new SimpleDateFormat("YYYY-MM-dd");
+				date = (Date) formatter.parse(nfe.getNfe().getInfNFe().getIde().getDEmi());
+				data.setTime(date);
+			} catch (ParseException e) {
+				e.printStackTrace();
+			} 
+			
 			String pathData = String.valueOf(data.get(Calendar.YEAR)) + separador + String.valueOf(data.get(Calendar.MONTH)+1);
 			
 			String pathEnviado = "";
