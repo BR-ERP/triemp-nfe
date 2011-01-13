@@ -121,7 +121,7 @@ public class NFeVenda extends NFe {
 				ide.setCMunFG(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
 				
 				emit.setCNPJ(getString(rs.getString("CNPJFILIAL"), 14, true, "./-"));
-				emit.setIE(getString(rs.getString("INSCFILIAL"), 14, true, "."));
+				emit.setIE(getString(rs.getString("INSCFILIAL"), 14, true, "./-"));
 				emit.setXNome(getString(rs.getString("RAZFILIAL"), 60, true));
 				emit.setXFant(getString(rs.getString("NOMEFILIAL"), 60));
 				emit.setIM(getString(rs.getString("INSCMUNFILIAL"), 15));
@@ -138,7 +138,7 @@ public class NFeVenda extends NFe {
 				endEmit.setNro(getString(rs.getString("NUMFILIAL"), 60, true));
 				endEmit.setXBairro(getString(rs.getString("BAIRFILIAL"), 60, true));
 				endEmit.setXCpl(getString(rs.getString("COMPLFILIAL"), 60));
-				endEmit.setCEP(getString(rs.getString("CEPFILIAL"), 8, false, "-"));
+				endEmit.setCEP(getString(rs.getString("CEPFILIAL"), 8, false, ".-"));
 				endEmit.setCMun(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
 				endEmit.setXMun(getString(rs.getString("NOMEMUNIC"), 60, true));
 				endEmit.setUF(getTUfEmi(rs.getString("SIGLAUF")));
@@ -225,9 +225,9 @@ public class NFeVenda extends NFe {
 				if (rs.getString("PESSOACLI").trim().equals("J")) {
 					dest.setCNPJ(getString(rs.getString("CNPJCLI"), 14, true, "./-"));
 				} else if (rs.getString("PESSOACLI").trim().equals("F")) {
-					dest.setCPF(getString(rs.getString("CPFCLI"), 11, true, ".-"));
+					dest.setCPF(getString(rs.getString("CPFCLI"), 11, true, "./-"));
 				}
-				dest.setIE(getString(rs.getString("INSCCLI"), 14, true, "."));
+				dest.setIE(getString(rs.getString("INSCCLI"), 14, true, "./-"));
 				dest.setISUF(getString(rs.getString("SUFRAMACLI"), 9));
 				
 				endDest.setXLgr(getString(rs.getString("ENDCLI"), 60, true));
@@ -630,12 +630,12 @@ public class NFeVenda extends NFe {
 				TNFe.InfNFe.Transp.Transporta transporta = new ObjectFactory().createTNFeInfNFeTranspTransporta();
 				transp.setTransporta(transporta);
 				if (rs.getString("CNPJTRAN") != null) {
-					transporta.setCNPJ(getString(rs.getString("CNPJTRAN"), 14));
+					transporta.setCNPJ(getString(rs.getString("CNPJTRAN"), 14, true, "./-"));
 				} else if (rs.getString("CPFTRAN") != null) {
-					transporta.setCPF(getString(rs.getString("CPFTRAN"), 11));
+					transporta.setCPF(getString(rs.getString("CPFTRAN"), 11, true, "./-"));
 				}
 				transporta.setXNome(getString(rs.getString("RAZTRAN"), 60));
-				transporta.setIE(getString(rs.getString("INSCTRAN"), 14, false, ".-"));
+				transporta.setIE(getString(rs.getString("INSCTRAN"), 14, false, "./-"));
 				transporta.setXEnder(getString(rs.getString("ENDTRAN"), 60));
 				transporta.setXMun(getString(rs.getString("CIDTRAN"), 60));
 				transporta.setUF(getTUf(rs.getString("UFTRAN")));
