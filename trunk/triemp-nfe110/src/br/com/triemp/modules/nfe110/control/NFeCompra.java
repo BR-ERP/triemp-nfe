@@ -137,7 +137,7 @@ public class NFeCompra extends NFe {
 				ide.setCMunFG(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
 				
 				emit.setCNPJ(getString(rs.getString("CNPJFILIAL"), 14, true, "./-"));
-				emit.setIE(getString(rs.getString("INSCFILIAL"), 14, true, "."));
+				emit.setIE(getString(rs.getString("INSCFILIAL"), 14, true, "./-"));
 				emit.setXNome(getString(rs.getString("RAZFILIAL"), 60, true));
 				emit.setXFant(getString(rs.getString("NOMEFILIAL"), 60));
 				emit.setIM(getString(rs.getString("INSCMUNFILIAL"), 15));
@@ -241,9 +241,9 @@ public class NFeCompra extends NFe {
 				if (rs.getString("PESSOAFOR").trim().equals("J")) {
 					dest.setCNPJ(getString(rs.getString("CNPJFOR"), 14, true, "./-"));
 				} else if (rs.getString("PESSOAFOR").trim().equals("F")) {
-					dest.setCPF(getString(rs.getString("CPFFOR"), 11, true, ".-"));
+					dest.setCPF(getString(rs.getString("CPFFOR"), 11, true, "./-"));
 				}
-				dest.setIE(getString(rs.getString("INSCFOR"), 14, true, "."));
+				dest.setIE(getString(rs.getString("INSCFOR"), 14, true, "./-"));
 				dest.setISUF(getString(rs.getString("SUFRAMAFOR"), 9));
 				
 				endDest.setXLgr(getString(rs.getString("ENDFOR"), 60, true));
@@ -644,12 +644,12 @@ public class NFeCompra extends NFe {
 				TNFe.InfNFe.Transp.Transporta transporta = new ObjectFactory().createTNFeInfNFeTranspTransporta();
 				transp.setTransporta(transporta);
 				if (rs.getString("CNPJTRAN") != null) {
-					transporta.setCNPJ(getString(rs.getString("CNPJTRAN"), 14));
+					transporta.setCNPJ(getString(rs.getString("CNPJTRAN"), 14, true, "./-"));
 				} else if (rs.getString("CPFTRAN") != null) {
-					transporta.setCPF(getString(rs.getString("CPFTRAN"), 11));
+					transporta.setCPF(getString(rs.getString("CPFTRAN"), 11, true, "./-"));
 				}
 				transporta.setXNome(getString(rs.getString("RAZTRAN"), 60));
-				transporta.setIE(getString(rs.getString("INSCTRAN"), 14, false, ".-"));
+				transporta.setIE(getString(rs.getString("INSCTRAN"), 14, false, "./-"));
 				transporta.setXEnder(getString(rs.getString("ENDTRAN"), 60));
 				transporta.setXMun(getString(rs.getString("CIDTRAN"), 60));
 				transporta.setUF(getTUf(rs.getString("UFTRAN")));
