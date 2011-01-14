@@ -189,8 +189,8 @@ public class DLConsultaNFe extends FFDialogo {
 			btPrevimp.setEnabled(true);
 			btEnviarMail.setEnabled(true);
 			btCancelar.setEnabled(true);
-		}// 101 - Cancelamento de NFe homologado
-		else if("101".equals(CStat)){
+		}// 101 - Cancelamento de NFe homologado ou 105 - Lote em processament
+		else if("101".equals(CStat) || "105".equals(CStat)){
 			btValidar.setEnabled(false);
 			btEnviar.setEnabled(false);
 			btStatus.setEnabled(true);
