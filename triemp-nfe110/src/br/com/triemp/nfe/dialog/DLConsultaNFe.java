@@ -387,7 +387,7 @@ public class DLConsultaNFe extends FFDialogo {
 			GregorianCalendar data = new GregorianCalendar();
 			
 			try {
-				DateFormat formatter = new SimpleDateFormat("YYYY-MM-dd");
+				DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 				date = (Date) formatter.parse(nfe.getNfe().getInfNFe().getIde().getDEmi());
 				data.setTime(date);
 			} catch (ParseException e) {
