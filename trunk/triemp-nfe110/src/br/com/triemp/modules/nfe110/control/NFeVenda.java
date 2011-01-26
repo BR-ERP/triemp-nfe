@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
+import org.freedom.infra.functions.SystemFunctions;
 import org.freedom.infra.model.jdbc.DbConnection;
 import org.freedom.library.functions.Funcoes;
 import org.freedom.modules.nfe.bean.AbstractNFEKey;
@@ -75,7 +76,11 @@ public class NFeVenda extends NFe {
 				rs = ps.executeQuery();
 				if(rs.next()){
 					pathAtual = rs.getString("PATHNFE");
-					
+					if (SystemFunctions.getOS() == SystemFunctions.OS_LINUX) {
+						pathAtual = pathAtual.replace("\\", "/");
+					} else if (SystemFunctions.getOS() == SystemFunctions.OS_WINDOWS) {
+						pathAtual = pathAtual.replace("/", "\\");
+					}
 					xmlNFe = new File(pathFreedom + separador + pathAtual);	
 				}
 				conNFE.commit();
