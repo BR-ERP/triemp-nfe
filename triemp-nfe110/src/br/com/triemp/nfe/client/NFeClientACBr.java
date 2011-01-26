@@ -26,7 +26,7 @@ public class NFeClientACBr {
 	private static String RETORNO = "[RETORNO]";
 	private static String CONSULTA = "[CONSULTA]";
 	private static String CANCELAMENTO = "[CANCELAMENTO]";
-	private static long TIMEOUT_READ = 40000;
+	private static long TIMEOUT_READ = 80000;
 	private static long TIMEOUT = 4000;
 	
 	public NFeClientACBr(String host, int port){
