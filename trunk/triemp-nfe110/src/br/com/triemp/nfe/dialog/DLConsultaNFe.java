@@ -222,6 +222,26 @@ public class DLConsultaNFe extends FFDialogo {
 	
 	private void validarNFe(){
 		if(!nfeClient.isClose()){
+			
+			Date date = null;
+			GregorianCalendar data = new GregorianCalendar();
+			try {
+				DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+				date = (Date) formatter.parse(nfe.getNfe().getInfNFe().getIde().getDEmi());
+				data.setTime(date);
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+			
+			if(date.before(new Date())){
+				if(Funcoes.mensagemConfirma(null, 
+						"CUIDADO!\nData de emissão da nota é anterior a data atual.\nDeseja emitir a nota eletrônica mesmo assim?") 
+						== JOptionPane.NO_OPTION){
+					this.setVisible(false);
+					return;
+				}
+			}
+			
 			fileAcbr = Aplicativo.getParameter("pathnfe") + separador + pathAtual;
 			String ret = nfeClient.validarNFe(fileAcbr);
 			if(ret.indexOf("OK") == -1){
