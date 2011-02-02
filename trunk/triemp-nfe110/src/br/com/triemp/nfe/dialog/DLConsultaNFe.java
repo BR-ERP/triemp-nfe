@@ -223,17 +223,17 @@ public class DLConsultaNFe extends FFDialogo {
 	private void validarNFe(){
 		if(!nfeClient.isClose()){
 			
-			Date date = null;
-			GregorianCalendar data = new GregorianCalendar();
+			Date dateEmi = null;
+			Date dateNow = null;
 			try {
 				DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-				date = (Date) formatter.parse(nfe.getNfe().getInfNFe().getIde().getDEmi());
-				data.setTime(date);
+				dateEmi = (Date) formatter.parse(nfe.getNfe().getInfNFe().getIde().getDEmi());
+				dateNow = (Date) formatter.parse(formatter.format(new Date()));
 			} catch (ParseException e) {
 				e.printStackTrace();
 			}
 			
-			if(date.before(new Date())){
+			if(dateEmi.before(dateNow)){
 				if(Funcoes.mensagemConfirma(null, 
 						"CUIDADO!\nData de emissão da nota é anterior a data atual.\nDeseja emitir a nota eletrônica mesmo assim?") 
 						== JOptionPane.NO_OPTION){
