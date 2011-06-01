@@ -103,7 +103,7 @@ public class NFeVenda extends NFe {
 	private boolean carregaVenda() {
 		PreparedStatement ps;
 		ResultSet rs;
-		String sql = "SELECT fi.RAZFILIAL, fi.NOMEFILIAL, fi.CNPJFILIAL, fi.INSCFILIAL, fi.INSCMUNFILIAL, fi.CNAEFILIAL, fi.DDDFILIAL, fi.FONEFILIAL, fi.ENDFILIAL, fi.COMPLFILIAL, fi.NUMFILIAL, fi.BAIRFILIAL, fi.CEPFILIAL, fi.CODMUNIC, mu.NOMEMUNIC, uf.CODUF, uf.SIGLAUF, fi.CODPAIS, pa.NOMEPAIS, pa.CODBACENPAIS, fi.PERCPISFILIAL, fi.PERCCOFINSFILIAL, fi.PERCIRFILIAL, fi.PERCCSOCIALFILIAL, fi.SIMPLESFILIAL, "
+		String sql = "SELECT fi.RAZFILIAL, fi.NOMEFILIAL, fi.CNPJFILIAL, fi.INSCFILIAL, fi.INSCMUNFILIAL, fi.CNAEFILIAL, fi.DDDFILIAL, fi.FONEFILIAL, fi.ENDFILIAL, fi.COMPLFILIAL, fi.NUMFILIAL, fi.BAIRFILIAL, fi.CEPFILIAL, fi.CODMUNIC, mu.NOMEMUNIC, uf.CODUF, uf.SIGLAUF, fi.CODPAIS, pa.NOMEPAIS, pa.CODBACENPAIS, fi.PERCPISFILIAL, fi.PERCCOFINSFILIAL, fi.PERCIRFILIAL, fi.PERCCSOCIALFILIAL, fi.SIMPLESFILIAL, fi.PERCSIMPLESFILIAL, "
 			+ "vd.CHAVENFEVENDA, vd.OBSVENDA, vd.CODFILIAL, vd.CODPLANOPAG, vd.DTEMITVENDA, vd.DTSAIDAVENDA, vd.CODCLI, vd.SERIE, vd.DOCVENDA, vd.CALCISSVENDA, vd.VLRBASEICMSVENDA, vd.VLRICMSVENDA, vd.VLRBASEICMSSTVENDA, vd.VLRICMSSTVENDA, vd.VLRPRODVENDA, vd.VLRFRETEVENDA, vd.VLRDESCVENDA, vd.VLRIPIVENDA, vd.VLRPISVENDA, vd.VLRCOFINSVENDA, vd.VLRADICVENDA, vd.VLRLIQVENDA, vd.VLRBASEISSVENDA, vd.VLRISSVENDA, vd.VLRICMSSIMPLES, vd.PERCICMSSIMPLES, vdf.VLRSEGFRETEVD "
 				+ "FROM VDVENDA vd INNER JOIN SGFILIAL fi ON (vd.CODFILIAL = fi.CODFILIAL) INNER JOIN SGUF uf ON (fi.SIGLAUF = uf.SIGLAUF) "
 				+ "INNER JOIN SGMUNICIPIO mu ON (fi.CODMUNIC = mu.CODMUNIC AND uf.SIGLAUF = mu.SIGLAUF) INNER JOIN SGPAIS pa ON (fi.CODPAIS = pa.CODPAIS) "
@@ -705,7 +705,7 @@ public class NFeVenda extends NFe {
 			}
 			
 			if(this.simples && vlrIcmsSimples.doubleValue() > 0){
-				setInfAdFisco(NFeUtil.geraMensagens(msgSimples, getDouble(vlrIcmsSimples.toString(), 15, 2, true), getDouble(new BigDecimal(this.aliqSimples).toString(), 15, 2, true)));
+				setInfAdFisco(NFeUtil.geraMensagens(this.msgSimples, getDouble(vlrIcmsSimples.toString(), 15, 2, true), getDouble(new BigDecimal(this.aliqSimples).toString(), 15, 2, true)));
 			}
 			
 			conSys.commit();
