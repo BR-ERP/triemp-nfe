@@ -252,7 +252,7 @@ public abstract class NFe {
 				ide.setProcEmi(getInteger(rs.getString("PROCEMINFE"), 1, true));
 				ide.setVerProc(getString(rs.getString("VERPROCNFE"), 20, true));
 				if(rs.getString("MENS") != null){
-					msgSimples = getString(rs.getString("MENS"));
+					this.msgSimples = getString(rs.getString("MENS"));
 				}
 				this.crt = rs.getString("REGIMETRIBNFE");
 			}
