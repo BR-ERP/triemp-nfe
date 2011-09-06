@@ -251,7 +251,11 @@ public class NFeCompra extends NFe {
 				} else if (rs.getString("PESSOAFOR").trim().equals("F")) {
 					dest.setCPF(getString(rs.getString("CPFFOR"), 11, true, "./-"));
 				}
-				dest.setIE(getString(rs.getString("INSCFOR"), 14, true, "./-"));
+				if(rs.getString("INSCFOR") == null){
+					dest.setIE(getString("", 14, false, "./-"));
+				}else{
+					dest.setIE(getString(rs.getString("INSCFOR"), 14, false, "./-"));
+				}
 				dest.setISUF(getString(rs.getString("SUFRAMAFOR"), 9));
 				
 				endDest.setXLgr(getString(rs.getString("ENDFOR"), 60, true));
@@ -329,7 +333,7 @@ public class NFeCompra extends NFe {
 				// Verificar se o valor do seguro é adicionado no CPITCOMPRA.VLRADICITCOMPRA
 				prod.setVSeg(getDouble(null , 15, 2, false, true));
 				prod.setVDesc(getDouble(rs.getString("VLRDESCITCOMPRA"), 15, 2, false, true));
-				
+				prod.setIndTot("1");
 				if(di != null){
 					prod.getDI().add(di);
 				}

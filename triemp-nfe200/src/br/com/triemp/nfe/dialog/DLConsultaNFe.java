@@ -418,8 +418,8 @@ public class DLConsultaNFe extends FFDialogo {
 			pathAtual = pathAtual.replace("enviar", newPath);
 		}else if(pathAtual.indexOf("temp") != -1){
 			pathAtual = pathAtual.replace("temp", newPath);
-		}else if(pathAtual.indexOf("regeitado") != -1){
-			pathAtual = pathAtual.replace("regeitado", newPath);
+		}else if(pathAtual.indexOf("rejeitado") != -1){
+			pathAtual = pathAtual.replace("rejeitado", newPath);
 		}else if(pathAtual.indexOf("deletado") != -1){
 			pathAtual = pathAtual.replace("deletado", newPath);
 		}else if(pathAtual.indexOf("enviado") != -1){
