@@ -236,7 +236,7 @@ public class NFeVenda extends NFe {
 					dest.setCPF(getString(rs.getString("CPFCLI"), 11, true, "./-"));
 				}
 				if(rs.getString("INSCCLI") == null){
-					dest.setIE(getString("ISENTO", 14, false, "./-"));
+					dest.setIE(getString("", 14, false, "./-"));
 				}else{
 					dest.setIE(getString(rs.getString("INSCCLI"), 14, false, "./-"));
 				}
