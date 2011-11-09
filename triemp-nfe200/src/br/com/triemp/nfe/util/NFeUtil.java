@@ -119,7 +119,12 @@ public class NFeUtil {
             digit = Integer.parseInt("" + barCode.charAt(barCode.length() - 1)); 
             ean = barCode.substring(0, barCode.length() - 1);            
             for (int i = 0; i <= ean.length() - 1; i++) {
-                sum += (Integer.parseInt("" + ean.charAt(i))) * (Integer.parseInt("" + checkSum.charAt(i)));
+            	if ( Character.isDigit( ean.charAt(i) ) ) {
+            		sum += (Integer.parseInt("" + ean.charAt(i))) * (Integer.parseInt("" + checkSum.charAt(i)));
+            	}
+            	else {
+            		return false;
+            	}
             }            
             calculated = 10 - (sum % 10);
             return (digit == calculated);
