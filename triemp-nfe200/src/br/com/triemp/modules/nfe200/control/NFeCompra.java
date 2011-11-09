@@ -312,7 +312,7 @@ public class NFeCompra extends NFe {
 
 				prod.setCProd(getInteger(rs.getString("CODPROD"), 60, true));
 				String ean = getString(rs.getString("CODEANPROD"), 14, true);
-				if(NFeUtil.isValidBarCode(ean)){
+				if(NFeUtil.isValidBarCodeEAN(ean)){
 					prod.setCEAN(ean);
 					prod.setCEANTrib(ean);
 				}else{

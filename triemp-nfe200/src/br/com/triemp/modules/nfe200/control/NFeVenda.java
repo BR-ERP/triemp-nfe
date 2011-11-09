@@ -25,6 +25,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.text.SimpleDateFormat;
 
 import org.freedom.infra.functions.SystemFunctions;
 import org.freedom.infra.model.jdbc.DbConnection;
@@ -129,6 +130,7 @@ public class NFeVenda extends NFe {
 				ide.setNNF(getInteger(rs.getString("DOCVENDA"), 9, true));
 				ide.setDEmi(getDate(rs.getString("DTEMITVENDA"), true));
 				ide.setDSaiEnt(getDate(rs.getString("DTSAIDAVENDA")));
+				ide.setHSaiEnt(new SimpleDateFormat("HH:mm:ss").format(new java.util.Date()));
 				ide.setTpNF(getString("1", 1, true));
 				ide.setCMunFG(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
 				
@@ -144,7 +146,7 @@ public class NFeVenda extends NFe {
 				endEmit.setNro(getString(rs.getString("NUMFILIAL"), 60, true));
 				endEmit.setXBairro(getString(rs.getString("BAIRFILIAL"), 60, true));
 				endEmit.setXCpl(getString(rs.getString("COMPLFILIAL"), 60));
-				endEmit.setCEP(getString(rs.getString("CEPFILIAL"), 8, false, ".-"));
+				endEmit.setCEP(getString(rs.getString("CEPFILIAL"), 8, true, ".-"));
 				endEmit.setCMun(getString(rs.getString("CODUF"), 2, true) + getString(rs.getString("CODMUNIC"), 5, true));
 				endEmit.setXMun(getString(rs.getString("NOMEMUNIC"), 60, true));
 				endEmit.setUF(getTUfEmi(rs.getString("SIGLAUF")));
@@ -236,7 +238,7 @@ public class NFeVenda extends NFe {
 					dest.setCPF(getString(rs.getString("CPFCLI"), 11, true, "./-"));
 				}
 				if(rs.getString("INSCCLI") == null){
-					dest.setIE(getString("", 14, false, "./-"));
+					dest.setIE(getString("ISENTO", 14, false, "./-"));
 				}else{
 					dest.setIE(getString(rs.getString("INSCCLI"), 14, false, "./-"));
 				}
@@ -306,7 +308,7 @@ public class NFeVenda extends NFe {
 
 				prod.setCProd(getInteger(rs.getString("CODPROD"), 60, true));
 				String ean = getString(rs.getString("CODBARPROD"), 14, true);
-				if(NFeUtil.isValidBarCode(ean)){
+				if(NFeUtil.isValidBarCodeEAN(ean)){
 					prod.setCEAN(ean);
 					prod.setCEANTrib(ean);
 				}else{
@@ -316,12 +318,12 @@ public class NFeVenda extends NFe {
 				prod.setXProd(getString(rs.getString("DESCPROD"), 120, true));
 				prod.setCFOP(getString(rs.getString("CODNAT"), 4, true, "."));
 				prod.setUCom(getString(rs.getString("CODUNID"), 6, true));
-				prod.setQCom(getDouble(rs.getString("QTDITVENDA"), 12, 4, true));
+				prod.setQCom(getDouble(rs.getString("QTDITVENDA"), 11, 4, true));
 				prod.setVUnCom(getDouble(rs.getString("PRECOITVENDA"), 16, 4, true));
 				prod.setVProd(getDouble(rs.getString("VLRPRODITVENDA"), 15, 2, true));
 				
 				prod.setUTrib(getString(rs.getString("CODUNID"), 6, true));
-				prod.setQTrib(getDouble(rs.getString("QTDITVENDA"), 12, 4, true));
+				prod.setQTrib(getDouble(rs.getString("QTDITVENDA"), 11, 4, true));
 				prod.setVUnTrib(getDouble(rs.getString("PRECOITVENDA"), 16, 4, true));
 				if(rs.getString("VLRFRETEITVENDA") != null){
 					prod.setVFrete(getDouble(rs.getString("VLRFRETEITVENDA"), 15, 2, false, true));
@@ -432,8 +434,8 @@ public class NFeVenda extends NFe {
 								icms.setICMSSN500(tipoIcms);
 								tipoIcms.setCSOSN(csosn);
 								tipoIcms.setOrig(getInteger(rs.getString("ORIGFISC"), 1, true));
-								tipoIcms.setVBCSTRet("0.00");
-								tipoIcms.setVICMSSTRet("0.00");
+								//tipoIcms.setVBCSTRet("0.00");
+								//tipoIcms.setVICMSSTRet("0.00");
 							} else if (csosn.equals("900")) {
 								TNFe.InfNFe.Det.Imposto.ICMS.ICMSSN900 tipoIcms = new ObjectFactory().createTNFeInfNFeDetImpostoICMSICMSSN900();
 								icms.setICMSSN900(tipoIcms);
@@ -533,8 +535,8 @@ public class NFeVenda extends NFe {
 								icms.setICMS60(tipoIcms);
 								tipoIcms.setCST(cst);
 								tipoIcms.setOrig(getString(rs.getString("ORIGFISC")));
-								tipoIcms.setVBCSTRet("0.00");
-								tipoIcms.setVICMSSTRet("0.00");
+								//tipoIcms.setVBCSTRet("0.00");
+								//tipoIcms.setVICMSSTRet("0.00");
 							} else if (cst.equals("70")) {
 								TNFe.InfNFe.Det.Imposto.ICMS.ICMS70 tipoIcms = new ObjectFactory().createTNFeInfNFeDetImpostoICMSICMS70();
 								icms.setICMS70(tipoIcms);
@@ -773,7 +775,12 @@ public class NFeVenda extends NFe {
 				}
 				TVeiculo veicTransp = new ObjectFactory().createTVeiculo();
 				transp.setVeicTransp(veicTransp);
-				veicTransp.setPlaca(getString(rs.getString("PLACAFRETEVD").replace("*", "0"), 8, true));
+				String placaFrete = rs.getString("PLACAFRETEVD").replace("-", "").replace("*", "");
+				if(placaFrete.length() == 7){
+					veicTransp.setPlaca(getString(placaFrete, 7, true));
+				}else{
+					veicTransp.setPlaca(getString("XXX9999", 7, true));
+				}
 				TUf ufVeicTransp = getTUf(rs.getString("UFFRETEVD"));
 				if(ufVeicTransp != null){
 					veicTransp.setUF(ufVeicTransp);
