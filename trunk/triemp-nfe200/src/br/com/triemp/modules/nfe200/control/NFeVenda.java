@@ -164,16 +164,17 @@ public class NFeVenda extends NFe {
 				icmsTot.setVBCST(getDouble(rs.getString("VLRBASEICMSSTVENDA"), 15, 2, true));
 				icmsTot.setVST(getDouble(rs.getString("VLRICMSSTVENDA"), 15, 2, true));
 				icmsTot.setVProd(getDouble(rs.getString("VLRPRODVENDA"), 15, 2, true));
-				/* Alterado para pegar a soma dos valores dos itens da venda
-				 * icmsTot.setVDesc(getDouble(rs.getString("VLRDESCVENDA"), 15, 2));
-				 * icmsTot.setVFrete(getDouble(rs.getString("VLRFRETEVENDA"), 15, 2));
-				 */
+				
+				//Os valores abaixo são rateados nos itens
+				icmsTot.setVDesc(getDouble(rs.getString("VLRDESCVENDA"), 15, 2));
+				icmsTot.setVFrete(getDouble(rs.getString("VLRFRETEVENDA"), 15, 2));
 				icmsTot.setVSeg(getDouble(rs.getString("VLRSEGFRETEVD"), 15, 2, true));
+				icmsTot.setVOutro(getDouble(rs.getString("VLRADICVENDA"), 15, 2, true));
+				//
 				icmsTot.setVII(getDouble("0", 15, 2)); // Valor total do Imposto de Importação. Não implementado no Freedom-erp
 				icmsTot.setVIPI(getDouble(rs.getString("VLRIPIVENDA"), 15, 2, true));
 				icmsTot.setVPIS(getDouble(rs.getString("VLRPISVENDA"), 15, 2, true));
 				icmsTot.setVCOFINS(getDouble(rs.getString("VLRCOFINSVENDA"), 15, 2, true));
-				icmsTot.setVOutro(getDouble(rs.getString("VLRADICVENDA"), 15, 2, true));
 				icmsTot.setVNF(getDouble(rs.getString("VLRLIQVENDA"), 15, 2, true));
 
 				if(rs.getDouble("VLRBASEISSVENDA") > 0){
@@ -280,10 +281,22 @@ public class NFeVenda extends NFe {
 	private void carregaItVenda() {
 		PreparedStatement ps;
 		ResultSet rs;
+		TNFe.InfNFe.Det det = new ObjectFactory().createTNFeInfNFeDet();
+		TNFe.InfNFe.Det.Prod prod = new ObjectFactory().createTNFeInfNFeDetProd();
 		
-		BigDecimal vlrDesc = new BigDecimal(0).setScale(2);
-		BigDecimal vlrFrete = new BigDecimal(0).setScale(2);
-		BigDecimal vlrSeg = new BigDecimal(total.getICMSTot().getVSeg());
+		//Variaveis iniciadas com os valores totais da tabela de venda
+		BigDecimal vTotalDesconto = new BigDecimal(total.getICMSTot().getVDesc());
+		BigDecimal vTotalFrete = new BigDecimal(total.getICMSTot().getVFrete());
+		BigDecimal vTotalSeguro = new BigDecimal(total.getICMSTot().getVSeg());
+		BigDecimal vTotalOutro = new BigDecimal(total.getICMSTot().getVOutro());
+		
+		//Variaveis para usadas para guardar os valores somados dos itens
+		BigDecimal sTotalDesconto = new BigDecimal(0).setScale(2);
+		BigDecimal sTotalFrete = new BigDecimal(0).setScale(2);
+		BigDecimal sTotalSeguro = new BigDecimal(0).setScale(2);
+		BigDecimal sTotalOutro = new BigDecimal(0).setScale(2);
+		BigDecimal sTotalIcmsSt = new BigDecimal(0).setScale(2);
+		BigDecimal sTotalIpi = new BigDecimal(0).setScale(2);
 		
 		String sql = "SELECT pro.CODBARPROD, pro.DESCPROD, pro.CODUNID, pro.TIPOPROD, natop.DESCNAT, clf.CODFISC, clf.CODNCM, clf.CODSERV, "
 				+ "clfit.CODITFISC, clfit.ORIGFISC, clfit.MODBCICMS, clfit.MODBCICMSST,  clfit.REDFISC, clfit.REDBASEST, clfit.CODSITTRIBIPI, clfit.TPCALCIPI, clfit.VLRIPIUNIDTRIB, clfit.CODSITTRIBPIS, clfit.ALIQPISFISC, clfit.VLRPISUNIDTRIB, clfit.CODSITTRIBCOF, clfit.ALIQCOFINSFISC, clfit.VLRCOFUNIDTRIB, clfit.CSOSN, " 
@@ -302,8 +315,8 @@ public class NFeVenda extends NFe {
 					//ide.setNatOp(getString(rs.getString("CODNAT"), 60, true)); // Código da CFOP
 					ide.setNatOp(getString(rs.getString("DESCNAT"), 60, true)); // Descrição da CFOP
 				}
-				TNFe.InfNFe.Det det = new ObjectFactory().createTNFeInfNFeDet();
-				TNFe.InfNFe.Det.Prod prod = new ObjectFactory().createTNFeInfNFeDetProd();
+				det = new ObjectFactory().createTNFeInfNFeDet();
+				prod = new ObjectFactory().createTNFeInfNFeDetProd();
 				det.setNItem(getInteger(String.valueOf(++nItem), 3, true));
 
 				prod.setCProd(getInteger(rs.getString("CODPROD"), 60, true));
@@ -321,23 +334,44 @@ public class NFeVenda extends NFe {
 				prod.setQCom(getDouble(rs.getString("QTDITVENDA"), 11, 4, true));
 				prod.setVUnCom(getDouble(rs.getString("PRECOITVENDA"), 16, 4, true));
 				prod.setVProd(getDouble(rs.getString("VLRPRODITVENDA"), 15, 2, true));
-				
 				prod.setUTrib(getString(rs.getString("CODUNID"), 6, true));
 				prod.setQTrib(getDouble(rs.getString("QTDITVENDA"), 11, 4, true));
 				prod.setVUnTrib(getDouble(rs.getString("PRECOITVENDA"), 16, 4, true));
-				if(rs.getString("VLRFRETEITVENDA") != null){
-					prod.setVFrete(getDouble(rs.getString("VLRFRETEITVENDA"), 15, 2, false, true));
-					vlrFrete = vlrFrete.add(new BigDecimal(getDouble(rs.getString("VLRFRETEITVENDA"), 15, 2, false)));
+				
+				/**
+				 * Calculos de rateio proporcional de valores nos itens
+				 */
+				BigDecimal percItem = new BigDecimal(0).setScale(2);
+				Double vProd = new Double(getDouble(prod.getVProd(), 15, 2));
+				if(vProd > 0){
+					percItem = new BigDecimal((vProd * 100) / new Double(getDouble(total.getICMSTot().getVProd(), 15, 2, true)));
 				}
-				if(rs.getString("VLRDESCITVENDA") != null){
-					prod.setVDesc(getDouble(rs.getString("VLRDESCITVENDA"), 15, 2, false, true));
-					vlrDesc = vlrDesc.add(new BigDecimal(getDouble(rs.getString("VLRDESCITVENDA"), 15, 2, false)));
+				//BigDecimal percItem = new BigDecimal(getDouble(prod.getVProd(), 15, 2)).multiply(new BigDecimal(100)).divide(new BigDecimal(getDouble(total.getICMSTot().getVProd(), 15, 2, true)));
+				
+				if(vTotalDesconto.doubleValue() > 0){
+					BigDecimal vDescIt = vTotalDesconto.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					sTotalDesconto = sTotalDesconto.add(vDescIt);
+					prod.setVDesc(getDouble(vDescIt.toString(), 15, 2));
 				}
-				// Rateia para os itens o valor do seguro
-				if(vlrSeg.doubleValue() > 0){
-					BigDecimal percIt = new BigDecimal(prod.getVProd()).multiply(new BigDecimal(100)).divide(new BigDecimal(total.getICMSTot().getVNF()));
-					prod.setVSeg(getDouble(new BigDecimal(total.getICMSTot().getVSeg()).multiply(percIt).divide(new BigDecimal(100)).toString(), 15,2, false));
+				if(vTotalFrete.doubleValue() > 0){
+					BigDecimal vFreteIt = vTotalFrete.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					sTotalFrete = sTotalFrete.add(vFreteIt);
+					prod.setVFrete(getDouble(vFreteIt.toString(), 15, 2));
 				}
+				if(vTotalSeguro.doubleValue() > 0){
+					BigDecimal vSeguroIt = vTotalSeguro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					sTotalSeguro = sTotalSeguro.add(vSeguroIt);
+					prod.setVSeg(getDouble(vSeguroIt.toString(), 15, 2));
+				}
+				if(vTotalOutro.doubleValue() > 0){
+					BigDecimal vOutroIt = vTotalOutro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+					sTotalOutro = sTotalOutro.add(vOutroIt);
+					prod.setVOutro(getDouble(vOutroIt.toString(), 15, 2));
+				}
+				
+				sTotalIcmsSt = sTotalIcmsSt.add(new BigDecimal(getDouble(rs.getString("VLRICMSSTITVENDA"), 15, 2, true)));
+				sTotalIpi = sTotalIpi.add(new BigDecimal(getDouble(rs.getString("VLRIPIITVENDA"), 15, 2, true)));
+				
 				prod.setIndTot("1");
 
 				// TODO - Implementações referente a dados de Importação de
@@ -695,16 +729,39 @@ public class NFeVenda extends NFe {
 					
 				}
 				
-				total.getICMSTot().setVFrete(vlrFrete.toString());
-				total.getICMSTot().setVDesc(vlrDesc.toString());
-				
-				//if(rs.getString("CODMENS") != null){
-				//	det.setInfAdProd(getString(NFeUtil.geraMensagens(mens1, vlricmssimples, percicmssimples), 500));
-				//}
 				det.setProd(prod);
 				det.setImposto(impostos);
 				infNFe.getDet().add(det);
 			}
+			
+			if(vTotalDesconto.doubleValue() != sTotalDesconto.doubleValue()){
+				BigDecimal difDesc = vTotalDesconto.subtract(sTotalDesconto);
+				sTotalDesconto = sTotalDesconto.add(difDesc);
+				prod.setVDesc(getDouble(new BigDecimal(prod.getVDesc()).add(difDesc).toString(), 15, 2, true));
+			}
+			if(vTotalFrete.doubleValue() != sTotalFrete.doubleValue()){
+				BigDecimal difFrete = vTotalFrete.subtract(sTotalFrete);
+				sTotalFrete = sTotalFrete.add(difFrete);
+				prod.setVFrete(getDouble(new BigDecimal(prod.getVFrete()).add(difFrete).toString(), 15, 2, true));
+			}
+			if(vTotalSeguro.doubleValue() != sTotalSeguro.doubleValue()){
+				BigDecimal difSeg = vTotalSeguro.subtract(sTotalSeguro);
+				sTotalSeguro = sTotalSeguro.add(difSeg);
+				prod.setVSeg(getDouble(new BigDecimal(prod.getVSeg()).add(difSeg).toString(), 15, 2, true));
+			}
+			if(vTotalOutro.doubleValue() != sTotalOutro.doubleValue()){
+				BigDecimal difOutro = vTotalOutro.subtract(sTotalOutro);
+				sTotalOutro = sTotalOutro.add(difOutro);
+				prod.setVOutro(getDouble(new BigDecimal(prod.getVOutro()).add(difOutro).toString(), 15, 2, true));
+			}
+			
+			total.getICMSTot().setVDesc(getDouble(sTotalDesconto.toString(), 15, 2, true));
+			total.getICMSTot().setVFrete(getDouble(sTotalFrete.toString(), 15, 2, true));
+			total.getICMSTot().setVSeg(getDouble(sTotalSeguro.toString(), 15, 2, true));
+			total.getICMSTot().setVOutro(getDouble(sTotalOutro.toString(), 15, 2, true));
+			
+			BigDecimal vNF = new BigDecimal(total.getICMSTot().getVProd()).subtract(sTotalDesconto).add(sTotalIcmsSt).add(sTotalFrete).add(sTotalSeguro).add(sTotalOutro).add(sTotalIpi);
+			total.getICMSTot().setVNF(getDouble(vNF.toString(), 15, 2, true));
 			
 			if(this.simples && vlrIcmsSimples.doubleValue() > 0){
 				setInfAdFisco(NFeUtil.geraMensagens(this.msgSimples, getDouble(vlrIcmsSimples.toString(), 15, 2, true), getDouble(new BigDecimal(this.aliqSimples).toString(), 15, 2, true)));
