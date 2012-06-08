@@ -289,6 +289,7 @@ public class NFeVenda extends NFe {
 		BigDecimal vTotalFrete = new BigDecimal(total.getICMSTot().getVFrete());
 		BigDecimal vTotalSeguro = new BigDecimal(total.getICMSTot().getVSeg());
 		BigDecimal vTotalOutro = new BigDecimal(total.getICMSTot().getVOutro());
+		BigDecimal vTotProd = new BigDecimal(total.getICMSTot().getVProd());
 		
 		//Variaveis para usadas para guardar os valores somados dos itens
 		BigDecimal sTotalDesconto = new BigDecimal(0).setScale(2);
@@ -341,32 +342,35 @@ public class NFeVenda extends NFe {
 				/**
 				 * Calculos de rateio proporcional de valores nos itens
 				 */
-				BigDecimal percItem = new BigDecimal(0).setScale(2);
-				Double vProd = new Double(getDouble(prod.getVProd(), 15, 2));
-				if(vProd > 0){
-					percItem = new BigDecimal((vProd * 100) / new Double(getDouble(total.getICMSTot().getVProd(), 15, 2, true)));
-				}
-				//BigDecimal percItem = new BigDecimal(getDouble(prod.getVProd(), 15, 2)).multiply(new BigDecimal(100)).divide(new BigDecimal(getDouble(total.getICMSTot().getVProd(), 15, 2, true)));
-				
-				if(vTotalDesconto.doubleValue() > 0){
-					BigDecimal vDescIt = vTotalDesconto.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-					sTotalDesconto = sTotalDesconto.add(vDescIt);
-					prod.setVDesc(getDouble(vDescIt.toString(), 15, 2));
-				}
-				if(vTotalFrete.doubleValue() > 0){
-					BigDecimal vFreteIt = vTotalFrete.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-					sTotalFrete = sTotalFrete.add(vFreteIt);
-					prod.setVFrete(getDouble(vFreteIt.toString(), 15, 2));
-				}
-				if(vTotalSeguro.doubleValue() > 0){
-					BigDecimal vSeguroIt = vTotalSeguro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-					sTotalSeguro = sTotalSeguro.add(vSeguroIt);
-					prod.setVSeg(getDouble(vSeguroIt.toString(), 15, 2));
-				}
-				if(vTotalOutro.doubleValue() > 0){
-					BigDecimal vOutroIt = vTotalOutro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
-					sTotalOutro = sTotalOutro.add(vOutroIt);
-					prod.setVOutro(getDouble(vOutroIt.toString(), 15, 2));
+				if(vTotProd.doubleValue() > 0){
+					BigDecimal percItem = new BigDecimal(0).setScale(2);
+					Double vProd = new Double(getDouble(prod.getVProd(), 15, 2, true));
+					
+					if(vProd > 0){
+						percItem = new BigDecimal((vProd * 100) / vTotProd.doubleValue());
+					}
+					//BigDecimal percItem = new BigDecimal(getDouble(prod.getVProd(), 15, 2)).multiply(new BigDecimal(100)).divide(new BigDecimal(getDouble(total.getICMSTot().getVProd(), 15, 2, true)));
+					
+					if(vTotalDesconto.doubleValue() > 0){
+						BigDecimal vDescIt = vTotalDesconto.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						sTotalDesconto = sTotalDesconto.add(vDescIt);
+						prod.setVDesc(getDouble(vDescIt.toString(), 15, 2));
+					}
+					if(vTotalFrete.doubleValue() > 0){
+						BigDecimal vFreteIt = vTotalFrete.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						sTotalFrete = sTotalFrete.add(vFreteIt);
+						prod.setVFrete(getDouble(vFreteIt.toString(), 15, 2));
+					}
+					if(vTotalSeguro.doubleValue() > 0){
+						BigDecimal vSeguroIt = vTotalSeguro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						sTotalSeguro = sTotalSeguro.add(vSeguroIt);
+						prod.setVSeg(getDouble(vSeguroIt.toString(), 15, 2));
+					}
+					if(vTotalOutro.doubleValue() > 0){
+						BigDecimal vOutroIt = vTotalOutro.multiply(percItem).divide(new BigDecimal(100)).setScale(2, BigDecimal.ROUND_HALF_EVEN);
+						sTotalOutro = sTotalOutro.add(vOutroIt);
+						prod.setVOutro(getDouble(vOutroIt.toString(), 15, 2));
+					}
 				}
 				
 				sTotalIcmsSt = sTotalIcmsSt.add(new BigDecimal(getDouble(rs.getString("VLRICMSSTITVENDA"), 15, 2, true)));
