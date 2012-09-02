@@ -836,7 +836,7 @@ public class NFeVenda extends NFe {
 				}
 				TVeiculo veicTransp = new ObjectFactory().createTVeiculo();
 				transp.setVeicTransp(veicTransp);
-				String placaFrete = rs.getString("PLACAFRETEVD").replace("-", "").replace("*", "");
+				String placaFrete = rs.getString("PLACAFRETEVD").replace("-", "").replace("*", "").replace(" ", "");
 				if(placaFrete.length() == 7){
 					veicTransp.setPlaca(getString(placaFrete, 7, true));
 				}else{
