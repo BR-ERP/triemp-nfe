@@ -68,4 +68,10 @@ public class TriempNFe extends AbstractNFEFactory {
 	public NFe getNfe() {
 		return nfe;
 	}
+
+	@Override
+	public boolean consistChaveNFE(String chavenfe) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }
