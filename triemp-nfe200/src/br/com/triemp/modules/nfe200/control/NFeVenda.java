@@ -320,9 +320,11 @@ public class NFeVenda extends NFe {
 				prod = new ObjectFactory().createTNFeInfNFeDetProd();
 				det.setNItem(getInteger(String.valueOf(++nItem), 3, true));
 
-				prod.setCProd(getInteger(rs.getString("CODPROD"), 60, true));
+//				prod.setCProd(getInteger(rs.getString("CODPROD"), 60, true));
+				prod.setCProd(getString(rs.getString("REFPROD"), 60, true));
+				
 				String ean = getString(rs.getString("CODBARPROD"), 14, true);
-				if(NFeUtil.isValidBarCodeEAN(ean)){
+				if(NFeUtil.isValidBarCodeEAN(ean)){ 
 					prod.setCEAN(ean);
 					prod.setCEANTrib(ean);
 				}else{
